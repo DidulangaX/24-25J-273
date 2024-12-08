@@ -73,5 +73,13 @@ The platform architecture includes:
 
 ---
 
+## System Architecture
+
+The system architecture is depicted in the following diagram:
+
+![System Architecture](https://github.com/DidulangaX/24-25J-273/blob/main/Images/24-25J-273%20.png)
+
+---
+
 ## Getting Started
 
