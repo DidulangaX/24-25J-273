@@ -20,7 +20,7 @@ The system emphasizes **front-end engineering**, providing an engaging learning 
 ### 2. Interview Preparation
 - NLP-based transcription and analysis of user responses.
 - Real-time feedback to correct technical and logical errors.
-- Adaptive question difficulty tailored to user performance.
+- Adaptive question difficulty tailored to user performance..
 
 ### 3. Community Support
 - Peer collaboration through a machine learning-powered matching system.
