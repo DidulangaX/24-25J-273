@@ -79,7 +79,7 @@ export default function Home() {
             </div>
           </div>
           <div className='image'>
-            <img src='https://static.wixstatic.com/media/618c8c_4644a26692024536b501e2df9de73a69~mv2.png' alt='Your Image' width='500' />
+            <img src='images\Home-image.png' alt='Your Image' width='420' />
           </div>
         </div>
       </div>
