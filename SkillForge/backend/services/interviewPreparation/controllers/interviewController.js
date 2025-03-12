@@ -1,37 +1,29 @@
-const Question = require('../models/Question');
+const Interview = require('../models/Interview');
 
-const addQuestion = async (req, res) => {
+const createInterview = async (req, res) => {
   try {
-    const { title, content, difficulty, tags } = req.body;
-    const question = new Question({ title, content, difficulty, tags });
-    await question.save();
-    res.status(201).json({ message: 'Question added successfully', question });
+    const { topic, difficulty } = req.body;
+    const newInterview = new Interview({
+      userId: req.user.userId, 
+      topic,
+      difficulty
+    });
+
+    await newInterview.save();
+    res.status(201).json({ message: 'Interview session created', newInterview });
   } catch (error) {
     res.status(500).json({ message: 'Internal Server Error' });
-    console.error(error);
   }
 };
 
-const getQuestions = async (req, res) => {
+const getUserInterviews = async (req, res) => {
   try {
-    const questions = await Question.find();
-    res.json(questions);
+    const interviews = await Interview.find({ userId: req.user.userId });
+    res.status(200).json(interviews);
   } catch (error) {
     res.status(500).json({ message: 'Internal Server Error' });
-    console.error(error);
   }
 };
 
-const deleteQuestion = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deletedQuestion = await Question.findByIdAndDelete(id);
-    if (!deletedQuestion) return res.status(404).json({ message: 'Question not found' });
-    res.json({ message: 'Question deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
-    console.error(error);
-  }
-};
+module.exports = { createInterview, getUserInterviews };
 
-module.exports = { addQuestion, getQuestions, deleteQuestion };

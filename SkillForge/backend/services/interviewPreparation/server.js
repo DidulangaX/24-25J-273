@@ -14,21 +14,28 @@ app.use(cors({
   credentials: true,
 }));
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+// MongoDB Connection
+const connectDB = async () => {
+  try {
+    if (!process.env.MONGO) {
+      throw new Error("MongoDB URI is missing! Check your .env file.");
+    }
 
-const db = mongoose.connection;
-db.on('error', (error) => console.error('MongoDB connection error:', error));
-db.once('open', () => console.log('MongoDB connection successful!'));
+    await mongoose.connect(process.env.MONGO);
+    console.log('✅ MongoDB connection successful!');
+  } catch (error) {
+    console.error('❌ MongoDB Connection Error:', error.message);
+    process.exit(1);
+  }
+};
+
+connectDB();
 
 // Routes
 const interviewRoutes = require('./routes/interviewRoutes');
-app.use('/api/interview', interviewRoutes);
+app.use('/api/interviews', interviewRoutes);
 
-// Start server
+// Start Server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`✅ InterviewPreparation service running on port ${PORT}`);
 });

@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const interviewController = require('../controllers/interviewController');
-const authMiddleware = require('../../authenticate/authMiddleware');
+const authMiddleware = require('../authMiddleware');
 
-router.post('/questions', authMiddleware.authenticateToken, interviewController.addQuestion);
-router.get('/questions', authMiddleware.authenticateToken, interviewController.getQuestions);
-router.delete('/questions/:id', authMiddleware.authenticateToken, interviewController.deleteQuestion);
+router.post('/', authMiddleware.authenticateToken, interviewController.createInterview);
+router.get('/', authMiddleware.authenticateToken, interviewController.getUserInterviews);
 
 module.exports = router;
