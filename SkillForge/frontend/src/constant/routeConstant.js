@@ -26,3 +26,4 @@ export const NAVIGATE_TO_EVENTS = '/events';
 export const NAVIGATE_TO_CONTACTS = '/contacts';
 export const NAVIGATE_TO_PRIVACY = '/privacy';
 export const NAVIGATE_TO_TERMS = '/terms';
+export const NAVIGATE_TO_COMMUNITY_SUPPORT = "/community";
