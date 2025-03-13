@@ -12,20 +12,39 @@ app.use(bodyParser.json());
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+const connectDB = async () => {
+  try {
+    if (!process.env.MONGO) {
+      throw new Error("MongoDB connection string is missing! Check your .env file.");
+    }
 
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
-db.once('open', () => console.log('MongoDB connected for Community Support!'));
+    await mongoose.connect(process.env.MONGO);
+    console.log('✅ MongoDB connection successful!');
+  } catch (error) {
+    console.error('❌ MongoDB Connection Error:', error.message);
+    process.exit(1);
+  }
+};
 
-// Routes
-const communityRoutes = require('./routes/communityRoutes');
-app.use('/api/community', communityRoutes);
+connectDB();
+
+// Import Routes
+//const communityRoutes = require('./routes/communityRoutes');
+const questionRoutes = require('./routes/questionRoutes');
+const answerRoutes = require('./routes/answerRoutes');
+const peerChatRoutes = require('./routes/peerChatRoutes');
+
+
+// Use Routes
+//app.use('/api/community', communityRoutes);
+app.use('/api/community/questions', questionRoutes);
+app.use('/api/community/answers', answerRoutes);
+app.use('/api/community/peer-chat', peerChatRoutes);
+
+
+
 
 // Start Server
 app.listen(PORT, () => {
-  console.log(`Community Support Service is running on port ${PORT}`);
+  console.log(`🚀 Community Support Service is running on port ${PORT}`);
 });
