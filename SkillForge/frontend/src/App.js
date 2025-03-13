@@ -11,7 +11,7 @@ import Register from './components/authentication/register';
 import CoursePage from './components/course/coursePage';
 import AddCourse from "./components/admin/addCourse";
 import { Admin, Instructor, Student } from "./enums/enums.js";
-import { NAVIGATE_TO_ADMIN_PROFILE, NAVIGATE_TO_ADD_COURSE, NAVIGATE_TO_UPDATE_CONTENT, NAVIGATE_TO_COURSE, NAVIGATE_TO_COURSE_PAGE, NAVIGATE_TO_INVALID_ROUTES, NAVIGATE_TO_LOGIN, NAVIGATE_TO_PAYMENTS, NAVIGATE_TO_PROFILE, NAVIGATE_TO_REGISTER, NAVIGATE_TO_ADD_COURSE_CONTENTS, NAVIGATE_TO_SUCCESS_PAYMENT, NAVIGATE_TO_UPDATE_COURSE, NAVIGATE_TO_HOME } from "./constant/routeConstant.js";
+import { NAVIGATE_TO_ADMIN_PROFILE, NAVIGATE_TO_ADD_COURSE, NAVIGATE_TO_UPDATE_CONTENT, NAVIGATE_TO_COURSE, NAVIGATE_TO_COURSE_PAGE, NAVIGATE_TO_INVALID_ROUTES, NAVIGATE_TO_LOGIN, NAVIGATE_TO_PAYMENTS, NAVIGATE_TO_PROFILE, NAVIGATE_TO_REGISTER, NAVIGATE_TO_ADD_COURSE_CONTENTS, NAVIGATE_TO_SUCCESS_PAYMENT, NAVIGATE_TO_UPDATE_COURSE, NAVIGATE_TO_HOME, NAVIGATE_TO_COMMUNITY_SUPPORT } from "./constant/routeConstant.js";
 import Error from "./components/404/error";
 import CryptoJS from "crypto-js";
 import Course from "./components/course/course";
@@ -23,7 +23,7 @@ import PaymentSuccess from "./components/payment/paymentSuccess.js";
 import UpdateCourse from './components/admin/updateCourse.js';
 import UpdateContent from './components/admin/updateContent.js';
 import { handleLogout } from './utils/utility.js';
-
+import CommunitySupportPage from './components/communitysupport/CommunitySupportPage';
 export default function App() {
 
   const authToken = Cookies.get('authToken');
@@ -68,6 +68,7 @@ export default function App() {
         />
         <Route path={NAVIGATE_TO_COURSE_PAGE} element={<CoursePage />} />
         <Route path={NAVIGATE_TO_INVALID_ROUTES} element={<Error />} />
+        <Route path={NAVIGATE_TO_COMMUNITY_SUPPORT} element={<CommunitySupportPage />} />
 
         {/* Authorized Routes */}
         <Route
