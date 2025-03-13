@@ -15,7 +15,7 @@ app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 const connectDB = async () => {
   try {
     if (!process.env.MONGO) {
-      throw new Error("MongoDB URI is missing! Check your .env file.");
+      throw new Error("MongoDB connection string is missing! Check your .env file.");
     }
 
     await mongoose.connect(process.env.MONGO);
@@ -28,9 +28,21 @@ const connectDB = async () => {
 
 connectDB();
 
-// Routes
-const communityRoutes = require('./routes/communityRoutes');
-app.use('/api/community', communityRoutes);
+// Import Routes
+//const communityRoutes = require('./routes/communityRoutes');
+const questionRoutes = require('./routes/questionRoutes');
+const answerRoutes = require('./routes/answerRoutes');
+const peerChatRoutes = require('./routes/peerChatRoutes');
+
+
+// Use Routes
+//app.use('/api/community', communityRoutes);
+app.use('/api/community/questions', questionRoutes);
+app.use('/api/community/answers', answerRoutes);
+app.use('/api/community/peer-chat', peerChatRoutes);
+
+
+
 
 // Start Server
 app.listen(PORT, () => {
