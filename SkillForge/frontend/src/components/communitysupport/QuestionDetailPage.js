@@ -1,6 +1,9 @@
 // frontend/src/components/communitysupport/QuestionDetailPage.js
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import Cookies from 'js-cookie'; // Import js-cookie
+import { jwtDecode } from 'jwt-decode';
+
 
 import {
     Flex,
@@ -21,20 +24,20 @@ import {
 } from '@chakra-ui/react';
 import { FaComment, FaThumbsUp, FaThumbsDown } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
-import Cookies from 'js-cookie'; // Import js-cookie
 
 function QuestionDetailPage() {
     const { questionId } = useParams();
     const [question, setQuestion] = useState(null);
     const [answerContent, setAnswerContent] = useState('');
     const [loadingQuestion, setLoadingQuestion] = useState(true);
-    const [answers, setAnswers] = useState([]);
+    const [answers, setAnswers] = useState();
     const [loadingAnswers, setLoadingAnswers] = useState(false);
     const toast = useToast();
     const authToken = Cookies.get('authToken'); // Get token from cookies
-    const [isAskingQuestion, setIsAskingQuestion] = useState(false); // State to control the visibility of the form
-    const [newQuestionTitle, setNewQuestionTitle] = useState('');
-    const [newQuestionContent, setNewQuestionContent] = useState('');
+    const decodedToken = authToken ? jwtDecode(authToken) : null;
+    const currentUserId = decodedToken ? decodedToken.userId : null; // Adjust 'userId' to the actual claim in your JWT
+    const [editingAnswerId, setEditingAnswerId] = useState(null);
+    const [editAnswerContent, setEditAnswerContent] = useState('');
 
 
     // -------------------------------------------------------------------
@@ -69,7 +72,7 @@ function QuestionDetailPage() {
             setLoadingAnswers(false);
         } catch (error) {
             console.error("Error fetching answers:", error);
-            setAnswers([]);
+            setAnswers();
             setLoadingAnswers(false);
             toast({
                 title: "Error loading answers.",
@@ -193,7 +196,7 @@ function QuestionDetailPage() {
                 { questionId: questionId, content: answerContent }, // <---- Added questionId to request body
                 { headers: { Authorization: `Bearer ${Cookies.get('authToken')}` } }
             );
-            
+
             console.log("Answer posted successfully:", response.data);
             toast({
                 title: "Answer posted!",
@@ -202,7 +205,7 @@ function QuestionDetailPage() {
                 isClosable: true,
             });
             setAnswerContent('');
-            fetchAnswers(); 
+            fetchAnswers();
 
         } catch (error) {
             console.error("Error posting answer:", error);
@@ -214,6 +217,69 @@ function QuestionDetailPage() {
                 duration: 5000,
                 isClosable: true,
             });
+        }
+    };
+
+    const handleEditAnswer = (answer) => {
+        setEditingAnswerId(answer._id);
+        setEditAnswerContent(answer.content);
+    };
+
+    const handleUpdateAnswer = async (answerId) => {
+        if (!authToken) {
+            toast({
+                title: "Authentication required.",
+                description: "Please log in to update your answer.",
+                status: "warning",
+                duration: 5000,
+                isClosable: true,
+            });
+            return;
+        }
+        if (!editAnswerContent.trim()) {
+            toast({ title: "Answer content cannot be empty.", status: "warning", duration: 3000, isClosable: true });
+            return;
+        }
+        try {
+            const response = await axios.put(
+                `http://localhost:5002/api/community/answers/${answerId}`, // Replace with your actual API endpoint
+                { content: editAnswerContent },
+                { headers: { Authorization: `Bearer ${authToken}` } }
+            );
+            console.log("Answer updated successfully:", response.data);
+            toast({ title: "Answer updated!", status: "success", duration: 3000, isClosable: true });
+            setEditingAnswerId(null); // Exit editing mode
+            fetchAnswers(); // Refresh answers
+        } catch (error) {
+            console.error("Error updating answer:", error);
+            toast({ title: "Error updating answer.", description: "Failed to update your answer.", status: "error", duration: 5000, isClosable: true });
+        }
+    };
+
+    const handleDeleteAnswer = async (answerId) => {
+        if (!authToken) {
+            toast({
+                title: "Authentication required.",
+                description: "Please log in to delete your answer.",
+                status: "warning",
+                duration: 5000,
+                isClosable: true,
+            });
+            return;
+        }
+        if (window.confirm("Are you sure you want to delete this answer?")) { // Basic confirmation
+            try {
+                const response = await axios.delete(
+                    `http://localhost:5002/api/community/answers/${answerId}`, // Replace with your actual API endpoint
+                    { headers: { Authorization: `Bearer ${authToken}` } }
+                );
+                console.log("Answer deleted successfully:", response.data);
+                toast({ title: "Answer deleted!", status: "success", duration: 3000, isClosable: true });
+                fetchAnswers(); // Refresh answers
+            } catch (error) {
+                console.error("Error deleting answer:", error);
+                toast({ title: "Error deleting answer.", description: "Failed to delete the answer.", status: "error", duration: 5000, isClosable: true });
+            }
         }
     };
 
@@ -229,14 +295,12 @@ function QuestionDetailPage() {
             align="center"
         >
             <Box bg="white" borderRadius="md" boxShadow="md" p={5} maxWidth="container.md" width="100%">
-                {/* Conditionally render the question details section */}
                 {loadingQuestion ? (
                     <Flex justify="center" align="center" minHeight="200px">
                         <Spinner size="lg" color="blue.500" />
                     </Flex>
                 ) : question ? (
                     <>
-                        {/* Question Details Display - Re-added Title, Author, etc. */}
                         <Stack direction={{ base: 'column', md: 'row' }} spacing="4" align="stretch" mb={4}>
                             <Flex direction="column" align="center" width={{ base: '100%', md: '70px' }} >
                                 <Avatar
@@ -247,14 +311,11 @@ function QuestionDetailPage() {
                                     fallback='initials'
                                     mb="2"
                                 />
-                               
+
                             </Flex>
 
                             <Box flex="1" minWidth="0">
                                 <Heading as="h2" size="lg" mb={2}>{question.title}</Heading>
-                                {/* <Flex align="center" mb={2}>
-                                <Text fontSize="sm" color="gray.500">Asked by {question.userIdObject?.username || 'Anonymous'}</Text>
-                            </Flex> */}
                                 <Text mb={4}>{question.content}</Text>
                                 <Flex mt={2} alignItems="center" flexWrap="wrap">
                                     {question.tags && question.tags.map((tag, index) => (
@@ -266,10 +327,8 @@ function QuestionDetailPage() {
                             </Box>
                         </Stack>
 
-
                         <Divider mb={4} />
 
-                        {/* "Add Answer" Input Area and Button - No changes here */}
                         <Textarea
                             placeholder="Your Answer"
                             value={answerContent}
@@ -278,8 +337,6 @@ function QuestionDetailPage() {
                         />
                         <Button colorScheme="blue" onClick={handlePostAnswer}>Add Answer</Button>
 
-                        {/* Answers Display Section - Basic Structure - No changes here */}
-                        {/* Answers Display Section - Displaying Answers */}
                         <Box mt={6}>
                             <Heading as="h3" size="md" mb={3}>Answers</Heading>
                             <List spacing={3}>
@@ -291,42 +348,71 @@ function QuestionDetailPage() {
                                     answers.map((answer) => (
                                         <ListItem key={answer._id} p={3} borderWidth="1px" borderRadius="md" borderColor="gray.200">
                                             <Text fontWeight="bold" mb={1}>{answer.userId?.username || 'Anonymous User'}</Text> {/* Answer Author Name */}
-                                            <Text>{answer.content}</Text> {/* Answer Content */}
+                                            {editingAnswerId === answer._id ? (
+                                                // Render textarea for editing
+                                                <Textarea
+                                                    value={editAnswerContent}
+                                                    onChange={(e) => setEditAnswerContent(e.target.value)}
+                                                    mb={2}
+                                                />
+                                            ) : (
+                                                // Render answer content
+                                                <Text>{answer.content}</Text>
+                                            )}
                                             <Flex mt={2} fontSize="sm" color="gray.500" alignItems="center">
                                                 <FaComment color="gray.500" size="12px" mr={1} />
-                                                <Text mr={2}>{answer.createdAt ? new Date(answer.createdAt).toLocaleDateString() : 'Unknown Date'}</Text> {/* Answer Date */}
-                                                {/* ... (more answer details like votes can be added later) ... */}
+                                                <Text mr={2}>{answer.createdAt ? new Date(answer.createdAt).toLocaleDateString() : 'Unknown Date'}</Text>
                                             </Flex>
-                                            <Flex alignItems="center">
-                                                
-    <Button
-        size="sm"
-        colorScheme="blue"
-        variant="ghost"
-        mr={2}
-        onClick={() => handleUpvoteAnswer(answer._id)} // Function to handle upvote
-    >
-        <FaThumbsUp size="14px" mr={1} />
-        <Text fontWeight="bold" fontSize="sm">{answer.upvotes?.length || 0}</Text> {/* Display upvote count */}
-    </Button>
-    <Button
-        size="sm"
-        colorScheme="gray"
-        variant="ghost"
-        onClick={() => handleDownvoteAnswer(answer._id)} // Function to handle downvote
-    >
-        <FaThumbsDown size="14px" mr={1} />
-        <Text fontWeight="bold" fontSize="sm">{answer.downvotes?.length || 0}</Text> {/* Display downvote count */}
-    </Button>
-</Flex>
+                                            <Flex alignItems="center" justify="space-between"> {/* Added justify */}
+                                                <Flex alignItems="center">
+                                                    <Button
+                                                        size="sm"
+                                                        colorScheme="blue"
+                                                        variant="ghost"
+                                                        mr={2}
+                                                        onClick={() => handleUpvoteAnswer(answer._id)}
+                                                    >
+                                                        <FaThumbsUp size="14px" mr={1} />
+                                                        <Text fontWeight="bold" fontSize="sm">{answer.upvotes?.length || 0}</Text>
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        colorScheme="gray"
+                                                        variant="ghost"
+                                                        onClick={() => handleDownvoteAnswer(answer._id)}
+                                                    >
+                                                        <FaThumbsDown size="14px" mr={1} />
+                                                        <Text fontWeight="bold" fontSize="sm">{answer.downvotes?.length || 0}</Text>
+                                                    </Button>
+                                                </Flex>
+                                                {currentUserId === answer.userId?._id && ( // Check if the current user owns the answer
+                                                    <Flex>
+                                                        {editingAnswerId === answer._id ? (
+                                                            <>
+                                                                <Button size="sm" colorScheme="green" mr={2} onClick={() => handleUpdateAnswer(answer._id)}>
+                                                                    Save
+                                                                </Button>
+                                                                <Button size="sm" onClick={() => setEditingAnswerId(null)}>
+                                                                    Cancel
+                                                                </Button>
+                                                            </>
+                                                        ) : (
+                                                            <Button size="sm" colorScheme="yellow" mr={2} onClick={() => handleEditAnswer(answer)}>
+                                                                Edit
+                                                            </Button>
+                                                        )}
+                                                        <Button size="sm" colorScheme="red" onClick={() => handleDeleteAnswer(answer._id)}>
+                                                            Delete
+                                                        </Button>
+                                                    </Flex>
+                                                )}
+                                            </Flex>
                                         </ListItem>
                                     ))
                                 ) : !loadingQuestion && ( // If not loading answers and no answers available (and question is loaded), show "No answers yet"
                                     <Text fontStyle="italic" color="gray.500">No answers yet. Be the first to answer!</Text>
                                 )}
                             </List>
-                            {/* Removed redundant "No answers yet" message outside List */}
-                            {/* Removed loadingAnswers spinner from here - moved inside List */}
                         </Box>
                     </>
                 ) : (
@@ -336,6 +422,5 @@ function QuestionDetailPage() {
         </Flex>
     );
 }
-
 
 export default QuestionDetailPage;
