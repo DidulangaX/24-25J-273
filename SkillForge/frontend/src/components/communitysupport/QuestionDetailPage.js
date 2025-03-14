@@ -1,5 +1,5 @@
 // frontend/src/components/communitysupport/QuestionDetailPage.js
-import React, { useState, useEffect } from 'react';
+import React, {useCallback, useState, useEffect } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie'; // Import js-cookie
 import { jwtDecode } from 'jwt-decode';
@@ -13,7 +13,6 @@ import {
     Box,
     Avatar,
     Badge,
-    Spacer,
     Divider,
     Stack,
     Textarea,
@@ -42,57 +41,40 @@ function QuestionDetailPage() {
 
     // -------------------------------------------------------------------
     // Moved fetchQuestionDetails OUTSIDE useEffect
-    const fetchQuestionDetails = async () => {
+    const fetchQuestionDetails = useCallback(async () => {
         setLoadingQuestion(true);
         try {
             const response = await axios.get(`http://localhost:5002/api/community/questions/${questionId}`);
             console.log("Question Details API Response:", response.data);
             setQuestion(response.data);
-            setLoadingQuestion(false);
         } catch (error) {
             console.error("Error fetching question details:", error);
+        } finally {
             setLoadingQuestion(false);
-            toast({
-                title: "Error loading question details.",
-                description: "Failed to fetch question information.",
-                status: "error",
-                duration: 5000,
-                isClosable: true,
-            });
         }
-    };
+    }, [questionId]);
 
-    // Moved fetchAnswers OUTSIDE useEffect
-    const fetchAnswers = async () => {
+    const fetchAnswers = useCallback(async () => {
         setLoadingAnswers(true);
         try {
             const response = await axios.get(`http://localhost:5002/api/community/questions/${questionId}/answers`);
             console.log("Answers API Response:", response.data);
             setAnswers(response.data || []);
-            setLoadingAnswers(false);
         } catch (error) {
             console.error("Error fetching answers:", error);
-            setAnswers();
+        } finally {
             setLoadingAnswers(false);
-            toast({
-                title: "Error loading answers.",
-                description: "Failed to retrieve answers for this question.",
-                status: "error",
-                duration: 5000,
-                isClosable: true,
-            });
         }
-    };
-    // -------------------------------------------------------------------
+    }, [questionId]);
 
     useEffect(() => {
         const loadData = async () => {
             await fetchQuestionDetails();
             await fetchAnswers();
         };
-        loadData();
-    }, [questionId]);
 
+        loadData();
+    }, [fetchQuestionDetails, fetchAnswers]);
 
     //-------------------------------
     const handleUpvoteAnswer = async (answerId) => {
