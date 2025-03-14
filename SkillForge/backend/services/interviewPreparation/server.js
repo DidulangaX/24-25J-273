@@ -1,41 +1,40 @@
+// SKILLFORGE\backend\services\interviewPreparation\server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-require('dotenv').config();
+require('dotenv').config(); // Load environment variables from .env file
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5001; // Use a different port for this service
 
 // Middleware
-app.use(bodyParser.json());
+app.use(bodyParser.json()); // Parse JSON request bodies
 app.use(cors({
   origin: 'http://localhost:3000',
   credentials: true,
 }));
 
-// MongoDB Connection
-const connectDB = async () => {
-  try {
-    if (!process.env.MONGO) {
-      throw new Error("MongoDB URI is missing! Check your .env file.");
-    }
+// MongoDB connection
+mongoose.connect(process.env.MONGO, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
-    await mongoose.connect(process.env.MONGO);
-    console.log('✅ MongoDB connection successful!');
-  } catch (error) {
-    console.error('❌ MongoDB Connection Error:', error.message);
-    process.exit(1);
-  }
-};
+const db = mongoose.connection;
+db.on('error', (error) => {
+  console.error('MongoDB connection error:', error);
+});
 
-connectDB();
+db.once('open', () => {
+  console.log('MongoDB connection successful!');
+});
 
 // Routes
 const interviewRoutes = require('./routes/interviewRoutes');
-app.use('/api/interviews', interviewRoutes);
+app.use('/api/interview', interviewRoutes);
 
-// Start Server
+// Start server
 app.listen(PORT, () => {
-  console.log(`✅ InterviewPreparation service running on port ${PORT}`);
+  console.log(`Interview Preparation Service is running on port ${PORT}`);
 });
