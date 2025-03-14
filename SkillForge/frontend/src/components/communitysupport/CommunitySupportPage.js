@@ -1,21 +1,41 @@
 // frontend/src/components/communitysupport/CommunitySupportPage.js
 import React from 'react';
-import { Container, Heading } from '@chakra-ui/react';
-import QuestionList from './QuestionList'; // Import QuestionList here
+import { Container, Heading, Box } from '@chakra-ui/react';
+import QuestionList from './QuestionList';
 
 function CommunitySupportPage() {
-    console.log("CommunitySupportPage is rendering!"); // ADD THIS LINE
-
     return (
-        <Container maxW="container.xl" paddingY="8">
-            <Heading as="h1" size="2xl" textAlign="center" marginBottom="6">
-                Welcome to the Community Support Forum
-            </Heading>
-            <Heading as="h3" size="md" textAlign="center" color="gray.500" marginBottom="4">
-                Explore questions and get help from the community.
-            </Heading>
-            {console.log("About to render QuestionList!")} {/* ADD THIS LINE */}
-            <QuestionList /> {/* Include the QuestionList component */}
+        <Container
+            maxW="container.xl"
+            paddingY="8"
+            bg="gray.50"
+            minHeight="calc(100vh - 80px)"
+            paddingTop="100px"  // ADD paddingTop HERE to push content below navbar
+        >
+            <Box
+                textAlign="center"
+                mb="8"
+            >
+                <Heading
+                    as="h1"
+                    size="2xl"
+                    fontWeight="bold"
+                    color="blue.600"
+                    marginBottom="2"
+                >
+                    Community Support Page
+                </Heading>
+                <Heading
+                    as="h3"
+                    size="md"
+                    fontWeight="medium"
+                    color="gray.500"
+                >
+                    Explore questions and get help from the community.
+                </Heading>
+            </Box>
+
+            <QuestionList />
         </Container>
     );
 }

@@ -8,6 +8,8 @@ const authMiddleware = require('../authMiddleware');
 router.post("/", authMiddleware.authenticateToken, questionController.postQuestion); // POST /api/community/questions/ - Create a question
 router.get("/", questionController.getAllQuestions);           // GET  /api/community/questions/ - Get all questions
 router.get("/:id", questionController.getQuestionById);        // GET  /api/community/questions/:id - Get question by ID
-router.post("/:id/like", authMiddleware.authenticateToken, questionController.likeQuestion); // POST /api/community/questions/:id/like - Like a question
+//router.post("/:id/like", authMiddleware.authenticateToken, questionController.likeQuestion); // POST /api/community/questions/:id/like - Like a question
+router.post("/:id/upvote", authMiddleware.authenticateToken, questionController.upvoteQuestion); // ADD upvote route
+router.post("/:id/downvote", authMiddleware.authenticateToken, questionController.downvoteQuestion); // ADD downvote route
 
 module.exports = router;
