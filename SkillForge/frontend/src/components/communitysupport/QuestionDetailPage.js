@@ -32,6 +32,9 @@ function QuestionDetailPage() {
     const [loadingAnswers, setLoadingAnswers] = useState(false);
     const toast = useToast();
     const authToken = Cookies.get('authToken'); // Get token from cookies
+    const [isAskingQuestion, setIsAskingQuestion] = useState(false); // State to control the visibility of the form
+    const [newQuestionTitle, setNewQuestionTitle] = useState('');
+    const [newQuestionContent, setNewQuestionContent] = useState('');
 
 
     // -------------------------------------------------------------------
@@ -333,5 +336,6 @@ function QuestionDetailPage() {
         </Flex>
     );
 }
+
 
 export default QuestionDetailPage;

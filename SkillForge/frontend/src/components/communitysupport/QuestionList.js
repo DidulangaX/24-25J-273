@@ -14,7 +14,13 @@ import {
     Divider,
     Stack,
     Avatar,
-    Button, // Import Button
+    Button, 
+    FormControl, 
+    FormLabel, 
+    Input, 
+    Textarea, 
+    Grid,
+    GridItem,
 } from '@chakra-ui/react';
 import { FaComment, FaThumbsUp, FaThumbsDown } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
@@ -25,6 +31,12 @@ function QuestionList() {
     const [loading, setLoading] = useState(true);
     const toast = useToast();
     const authToken = Cookies.get('authToken'); // Get token for auth check
+    const [isAskingQuestion, setIsAskingQuestion] = useState(false); 
+    const [newQuestionTitle, setNewQuestionTitle] = useState(''); 
+    const [newQuestionContent, setNewQuestionContent] = useState('');
+      const [currentTagInput, setCurrentTagInput] = useState('');
+      const [newQuestionTags, setNewQuestionTags] = useState([]);
+    
 
     useEffect(() => {
         console.log("QuestionList useEffect is running!");
@@ -120,7 +132,7 @@ function QuestionList() {
                 )
             );
     
-            
+         
     
         } catch (error) {
             console.error("Error upvoting question:", error);
@@ -167,10 +179,7 @@ function QuestionList() {
                 )
             );
     
-            // **NO NEED TO CALL refreshQuestions() IMMEDIATELY HERE**
-            // refreshQuestions();
-    
-            // Optional: setTimeout(refreshQuestions, 5000);
+           
     
         } catch (error) {
             console.error("Error downvoting question:", error);
@@ -184,6 +193,65 @@ function QuestionList() {
             // Consider rollback if needed
         }
     };
+
+    //---------------ask question method
+    const handlePostNewQuestion = async () => {
+        if (!authToken) {
+            toast({
+                title: "Authentication required.",
+                description: "Please log in to ask a question.",
+                status: "warning",
+                duration: 5000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        if (!newQuestionTitle.trim() || !newQuestionContent.trim()) {
+            toast({
+                title: "Please fill in both the title and content.",
+                status: "warning",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        try {
+            const response = await axios.post(
+                'http://localhost:5002/api/community/questions',
+                {title: newQuestionTitle,
+                content: newQuestionContent,
+                tags: newQuestionTags,
+                },
+                { headers: { Authorization: `Bearer ${authToken}` } }
+            );
+
+            console.log("New question posted:", response.data);
+            toast({
+                title: "Question posted successfully!",
+                status: "success",
+                duration: 3000,
+                isClosable: true,
+            });
+
+            // Reset the form and refresh the question list
+            setNewQuestionTitle('');
+            setNewQuestionContent('');
+            setIsAskingQuestion(false);
+            refreshQuestions(); // Call your existing function to refresh the list
+        } catch (error) {
+            console.error("Error posting new question:", error);
+            toast({
+                title: "Error posting question.",
+                description: "Failed to submit your question.",
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
+        }
+    };
+
 
 
     if (loading) {
@@ -199,8 +267,106 @@ function QuestionList() {
     }
 
     return (
+        <Box>
+        <Flex justify="end" mb={4}> {/* Align the button to the right */}
+            <Button colorScheme="blue" onClick={() => setIsAskingQuestion(true)}>
+                Ask Question
+            </Button>
+        </Flex>
+
+        {isAskingQuestion && (
+    <Box
+        bg="gray.50" // Light gray background
+        p={6} // Increased padding for better spacing
+        borderRadius="md"
+        boxShadow="md"
+        mb={4}
+        maxWidth="md" // Limit the maximum width of the form
+        mx="auto" // Center the form horizontally
+        border="1px solid" // Add a subtle border
+        borderColor="gray.200"
+    >
+        <Heading as="h2" size="md" mb={5} color="gray.700">
+            Ask a New Question
+        </Heading>
+        <Stack spacing={5}>
+            <FormControl>
+                <FormLabel htmlFor="question-title" color="gray.700">
+                    Title
+                </FormLabel>
+                <Input
+                    id="question-title"
+                    type="text"
+                    value={newQuestionTitle}
+                    onChange={(e) => setNewQuestionTitle(e.target.value)}
+                    bg="white" // Ensure input background is white
+                    borderColor="gray.300"
+                    _focus={{ borderColor: "blue.500" }}
+                />
+            </FormControl>
+            <FormControl>
+                <FormLabel htmlFor="question-content" color="gray.700">
+                    Content
+                </FormLabel>
+                <Textarea
+                    id="question-content"
+                    value={newQuestionContent}
+                    onChange={(e) => setNewQuestionContent(e.target.value)}
+                    rows={5}
+                    bg="white"
+                    borderColor="gray.300"
+                    _focus={{ borderColor: "blue.500" }}
+                />
+            </FormControl>
+            <FormControl>
+                <FormLabel htmlFor="question-tags" color="gray.700">
+                    Tags (press Enter to add)
+                </FormLabel>
+                <Input
+                    id="question-tags"
+                    type="text"
+                    value={currentTagInput}
+                    onChange={(e) => setCurrentTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && currentTagInput.trim()) {
+                            setNewQuestionTags([...newQuestionTags, currentTagInput.trim()]);
+                            setCurrentTagInput('');
+                        }
+                    }}
+                    bg="white"
+                    borderColor="gray.300"
+                    _focus={{ borderColor: "blue.500" }}
+                />
+                <Flex mt={2} wrap="wrap">
+                    {newQuestionTags.map((tag, index) => (
+                        <Badge key={index} colorScheme="blue" mr={2} mb={1}>
+                            {tag}
+                        </Badge>
+                    ))}
+                </Flex>
+            </FormControl>
+            <Flex justify="end">
+                <Button colorScheme="gray" mr={2} onClick={() => setIsAskingQuestion(false)}>
+                    Cancel
+                </Button>
+                <Button colorScheme="blue" onClick={handlePostNewQuestion}>
+                    Post Question
+                </Button>
+            </Flex>
+        </Stack>
+    </Box>
+)}
+        
+
+        {loading ? (
+            <Flex justify="center" align="center" minHeight="200px">
+                <Spinner size="lg" color="blue.500" />
+            </Flex>
+        ) : (
         <List spacing={4} mt="4">
+            
             {questions.map((question, index) => (
+                
                 <ListItem
                     key={question._id}
                     padding="5"
@@ -214,6 +380,7 @@ function QuestionList() {
                     }}
                     transition="all 0.2s ease-in-out"
                 >
+                    
                     <Stack direction={{ base: 'column', md: 'row' }} spacing="4" align="stretch">
                         {/* Avatar and Vote Counts - Left Side */}
                         <Flex direction="column" align="center" width={{ base: '100%', md: '70px' }} >
@@ -290,7 +457,9 @@ function QuestionList() {
                 </ListItem>
             ))}
         </List>
+    )}
+    </Box>
+
     );
 }
-
 export default QuestionList;
