@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "dependencies": {
     "accesscontrol": "^2.2.1",
+    "authenticate": "file:",
     "bcrypt": "^5.1.0",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.2",

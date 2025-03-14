@@ -1,0 +1,11 @@
+/* src/components/modulePage/VideoPlayer/VideoPlayer.css */
+.video-container {
+  margin-bottom: 20px;
+}
+
+.interaction-count {
+  font-size: 12px;
+  color: #6c757d;
+  text-align: right;
+  margin-top: 5px;
+}
