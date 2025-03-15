@@ -28,12 +28,14 @@ const postAnswer = async (req, res) => {
 
 const getAnswersByQuestionId = async (req, res) => {
     try {
-        const answers = await Answer.find({ questionId: req.params.questionId }).populate('userId', 'username email');
+        const answers = await Answer.find({ questionId: req.params.questionId })
+            .populate('userId', 'username email');  // You can also populate any other fields if needed
         res.json(answers);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching answers', error: error.message });
     }
 };
+
 
 const likeAnswer = async (req, res) => {
     try {

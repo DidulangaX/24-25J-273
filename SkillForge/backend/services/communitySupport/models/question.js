@@ -19,15 +19,17 @@ mongoose.model('User', userSchema);
 
 //questions mode
 const questionSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to User model from authenticate service
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
     content: { type: String, required: true },
-    tags: [String], // Optional tags for categorization
+    tags: [String],
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Users who liked the question
+   
+    upvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],     // ADD upvotes field
+    downvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],   // ADD downvotes field
     peerMatchRequested: { type: Boolean, default: false },
-    // ... potentially add fields for status (open, closed, answered), etc.
+    
 });
 
 // Set the custom collection name to "communityquestions"
