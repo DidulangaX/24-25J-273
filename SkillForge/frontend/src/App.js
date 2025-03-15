@@ -1,3 +1,4 @@
+//SkillForge\frontend\src\App.js
 import React, { useState, useEffect } from 'react';
 import bootstrap from "../node_modules/bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
@@ -23,6 +24,13 @@ import PaymentSuccess from "./components/payment/paymentSuccess.js";
 import UpdateCourse from './components/admin/updateCourse.js';
 import UpdateContent from './components/admin/updateContent.js';
 import { handleLogout } from './utils/utility.js';
+import { AdaptiveQuestionPage, Leaderboard } from './components/adaptive';
+import ChallengeSessionPage from './components/adaptive/ChallengeSessionPage';
+import ChallengeFriendsPage from './components/adaptive/ChallengeFriendsPage';
+import ChallengeWaitingPage from './components/adaptive/ChallengeWaitingPage';
+import ChallengeResultsPage from './components/adaptive/ChallengeResultsPage.js';
+
+
 
 export default function App() {
 
@@ -106,7 +114,32 @@ export default function App() {
           path={NAVIGATE_TO_PAYMENTS}
           element={isLoggedIn && isStudent ? <Payment /> : <Error />}
         />
+
+        <Route
+          path="/adaptive"
+          element={<AdaptiveQuestionPage />} 
+        />  
+
+        <Route
+          path="/leaderboard"
+          element={<Leaderboard />} 
+        />  
+
+        <Route 
+          path="/challenge/:sessionId" 
+          element={<ChallengeSessionPage />} 
+        />
+
+        <Route path="/challenge-friends"
+         element={<ChallengeFriendsPage />} 
+         />
+
+<Route path="/challenge-waiting/:sessionId" element={<ChallengeWaitingPage />} />
+<Route path="/challenge-results/:sessionId" element={<ChallengeResultsPage />} />
+
+
       </Routes>
+
       <Footer />
     </BrowserRouter>
   );

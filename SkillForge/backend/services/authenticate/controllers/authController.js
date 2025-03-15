@@ -1,6 +1,25 @@
+//SkillForge\backend\services\authenticate\controllers\authController.js
+
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+
+
+const getActiveUsers = async (req, res) => {
+  
+  try {
+    
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const activeUsers = await User.find({
+      lastActive: { $gte: fiveMinutesAgo }
+    }).select('username email role lastActive');
+    res.json(activeUsers);
+  } catch (err) {
+    console.error('Error fetching active users:', err);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 
 const register = async (req, res) => {
   try {
@@ -88,4 +107,12 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getAllUsers, getUserById, updateUser, deleteUser };
+module.exports = { 
+  register, 
+  login, 
+  getAllUsers, 
+  getUserById, 
+  updateUser, 
+  deleteUser,
+  getActiveUsers // Add this line
+};
