@@ -24,6 +24,7 @@ import UpdateCourse from './components/admin/updateCourse.js';
 import UpdateContent from './components/admin/updateContent.js';
 import { handleLogout } from './utils/utility.js';
 import CommunitySupportPage from './components/communitysupport/CommunitySupportPage';
+import QuestionDetailPage from './components/communitysupport/QuestionDetailPage';
 export default function App() {
 
   const authToken = Cookies.get('authToken');
@@ -69,6 +70,8 @@ export default function App() {
         <Route path={NAVIGATE_TO_COURSE_PAGE} element={<CoursePage />} />
         <Route path={NAVIGATE_TO_INVALID_ROUTES} element={<Error />} />
         <Route path={NAVIGATE_TO_COMMUNITY_SUPPORT} element={<CommunitySupportPage />} />
+        <Route path="/community/questions/:questionId" element={<QuestionDetailPage />} />
+        
 
         {/* Authorized Routes */}
         <Route

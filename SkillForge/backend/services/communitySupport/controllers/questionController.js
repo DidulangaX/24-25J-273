@@ -1,4 +1,6 @@
 const Question = require('../models/question');
+const Answer = require('../models/answer'); // Make sure you have this if not already present
+const Vote = require('../models/vote');     // Make sure you have this if not already present
 
 const postQuestion = async (req, res) => {
     try {
@@ -22,20 +24,44 @@ const postQuestion = async (req, res) => {
 
 const getAllQuestions = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1; // Get page from query params, default to 1
-        const limit = parseInt(req.query.limit) || 10; // Get limit from query params, default to 10
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
         const questions = await Question.find({})
-            .populate('userId', 'username email')
-            .skip(skip) // Apply skip for pagination
-            .limit(limit); // Apply limit for pagination
+            .populate({
+                path: 'userId',
+                select: 'username profilePic'
+            })
+            .skip(skip)
+            .limit(limit)
+            .lean()
+            .sort({ createdAt: -1 });
 
-        const totalQuestions = await Question.countDocuments(); // Get total number of questions
+        const totalQuestions = await Question.countDocuments();
         const totalPages = Math.ceil(totalQuestions / limit);
 
+        const questionList = await Promise.all(questions.map(async (question) => {
+            const upvotes = await Vote.countDocuments({ questionId: question._id, voteType: 'upvote' });
+            const downvotes = await Vote.countDocuments({ questionId: question._id, voteType: 'downvote' });
+            const answerCount = await Answer.countDocuments({ questionId: question._id });
+
+            return {
+                _id: question._id,
+                title: question.title,
+                content: question.content,
+                tags: question.tags,
+                createdAt: question.createdAt,
+                authorName: question.userId ? question.userId.username : 'Anonymous',
+                authorProfilePic: question.userId ? question.userId.profilePic : null,
+                upvotes: upvotes,
+                downvotes: downvotes,
+                answerCount: answerCount,
+            };
+        }));
+
         res.json({
-            questions,
+            questions: questionList,
             page,
             totalPages,
             totalQuestions
@@ -58,7 +84,10 @@ const getQuestionById = async (req, res) => {
     }
 };
 
-const likeQuestion = async (req, res) => {
+
+
+// ADD these upvoteQuestion and downvoteQuestion functions:
+const upvoteQuestion = async (req, res) => {
     try {
         const question = await Question.findById(req.params.id);
         if (!question) {
@@ -66,18 +95,60 @@ const likeQuestion = async (req, res) => {
         }
 
         const userId = req.user.userId;
-        if (question.likes.includes(userId)) {
-            // Unlike if already liked
-            question.likes = question.likes.filter(id => id.toString() !== userId);
+
+        // Check if user already downvoted, remove downvote if present
+        question.downvotes = question.downvotes.filter(id => id.toString() !== userId);
+
+        if (question.upvotes.includes(userId)) {
+            // If already upvoted, remove upvote (toggle)
+            question.upvotes = question.upvotes.filter(id => id.toString() !== userId);
         } else {
-            // Like if not liked
-            question.likes.push(userId);
+            // Otherwise, add upvote
+            question.upvotes.push(userId);
         }
+
         await question.save();
-        res.json({ message: 'Question like status updated', likes: question.likes.length });
+        res.json({ message: 'Question upvote status updated', upvotes: question.upvotes.length, downvotes: question.downvotes.length });
+
     } catch (error) {
-        res.status(500).json({ message: 'Error liking question', error: error.message });
+        res.status(500).json({ message: 'Error upvoting question', error: error.message });
     }
 };
 
-module.exports = { postQuestion, getAllQuestions, getQuestionById, likeQuestion };
+const downvoteQuestion = async (req, res) => {
+    try {
+        const question = await Question.findById(req.params.id);
+        if (!question) {
+            return res.status(404).json({ message: 'Question not found' });
+        }
+
+        const userId = req.user.userId;
+
+        // Check if user already upvoted, remove upvote if present
+        question.upvotes = question.upvotes.filter(id => id.toString() !== userId);
+
+        if (question.downvotes.includes(userId)) {
+            // If already downvoted, remove downvote (toggle)
+            question.downvotes = question.downvotes.filter(id => id.toString() !== userId);
+        } else {
+            // Otherwise, add downvote
+            question.downvotes.push(userId);
+        }
+
+        await question.save();
+        res.json({ message: 'Question downvote status updated', upvotes: question.upvotes.length, downvotes: question.downvotes.length });
+
+    } catch (error) {
+        res.status(500).json({ message: 'Error downvoting question', error: error.message });
+    }
+};
+
+
+module.exports = {
+    postQuestion,
+    getAllQuestions,
+    getQuestionById,
+    // REMOVE this line: likeQuestion,  // No longer exporting likeQuestion
+    upvoteQuestion,         // ADD upvoteQuestion
+    downvoteQuestion        // ADD downvoteQuestion
+};

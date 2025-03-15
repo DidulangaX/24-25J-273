@@ -33,6 +33,7 @@ connectDB();
 const questionRoutes = require('./routes/questionRoutes');
 const answerRoutes = require('./routes/answerRoutes');
 const peerChatRoutes = require('./routes/peerChatRoutes');
+const questionAnswerRoutes = require('./routes/questionAnswerRoutes');
 
 
 // Use Routes
@@ -40,6 +41,7 @@ const peerChatRoutes = require('./routes/peerChatRoutes');
 app.use('/api/community/questions', questionRoutes);
 app.use('/api/community/answers', answerRoutes);
 app.use('/api/community/peer-chat', peerChatRoutes);
+app.use('/api/community/questions', questionAnswerRoutes);
 
 
 
