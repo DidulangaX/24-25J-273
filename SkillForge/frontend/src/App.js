@@ -25,6 +25,7 @@ import UpdateContent from './components/admin/updateContent.js';
 import { handleLogout } from './utils/utility.js';
 import CommunitySupportPage from './components/communitysupport/CommunitySupportPage';
 import InterviewPractice from "./components/interviewPreperation/InterviewPractice";
+import InterviewSession from "./components/interviewPreperation/InterviewSession";
 export default function App() {
 
   const authToken = Cookies.get('authToken');
@@ -72,6 +73,7 @@ export default function App() {
         <Route path={NAVIGATE_TO_COMMUNITY_SUPPORT} element={<CommunitySupportPage />} />
 
         <Route path="/interview" element={<InterviewPractice />} />
+        <Route path="/start-interview" element={<InterviewSession />} />
 
         {/* Authorized Routes */}
         <Route
