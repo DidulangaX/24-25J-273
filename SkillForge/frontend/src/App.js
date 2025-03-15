@@ -24,6 +24,7 @@ import UpdateCourse from './components/admin/updateCourse.js';
 import UpdateContent from './components/admin/updateContent.js';
 import { handleLogout } from './utils/utility.js';
 import CommunitySupportPage from './components/communitysupport/CommunitySupportPage';
+import QuestionDetailPage from './components/communitysupport/QuestionDetailPage';
 import InterviewPractice from "./components/interviewPreperation/InterviewPractice";
 import InterviewSession from "./components/interviewPreperation/InterviewSession";
 export default function App() {
@@ -74,6 +75,7 @@ export default function App() {
 
         <Route path="/interview" element={<InterviewPractice />} />
         <Route path="/start-interview" element={<InterviewSession />} />
+	<Route path="/community/questions/:questionId" element={<QuestionDetailPage />} />
 
         {/* Authorized Routes */}
         <Route
@@ -117,4 +119,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
