@@ -10,18 +10,8 @@ import { PAGE_SPINNER_LOADING } from '../../constant/timeConstant';
 import LoadingSpinner from '../spinner/spinner';
 
 export default function Home() {
-
   const [courseDetails, setCourseDetails] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isPageLoading, setIsPageLoading] = useState(true);
-
-  // useEffect(() => {
-  //   const timeout = setTimeout(() => {
-  //     setIsPageLoading(false);
-  //   }, PAGE_SPINNER_LOADING);
-
-  //   return () => clearTimeout(timeout);
-  // }, []);
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -34,7 +24,6 @@ export default function Home() {
           },
         });
 
-        // Fetch instructor details for each course
         const coursesWithInstructors = await Promise.all(
           response.data.map(async course => {
             const instructorResponse = await axios.get(`${baseUrl_auth}${API_GET_USERS_BY_USERID}/${course.instructor}`, {
@@ -59,14 +48,11 @@ export default function Home() {
 
   return (
     <div>
-      {/* <div className='overlay' style={{ display: isPageLoading ? 'block' : 'none' }}>
-        {isPageLoading && <LoadingSpinner />}
-      </div> */}
       <div className='home-container'>
         <div className='content'>
           <div className='text'>
             <h1 style={{ fontSize: '75px', fontWeight: 'bold' }}>Learn without limits</h1>
-            <p>Start, switch, or advance your career with more than 6,900 courses, Professional Certificates, and degrees from world-className universities and companies.</p>
+            <p>Start, switch, or advance your career with more than 6,900 courses, Professional Certificates, and degrees from world-class universities and companies.</p>
             <div className="buttons">
               <Link to={NAVIGATE_TO_REGISTER}>
                 <Button bg='#0056d2' color='white' variant='solid' borderRadius='4px' size='lg' style={{ marginRight: '10px', marginTop: '10px' }}>
@@ -79,96 +65,81 @@ export default function Home() {
             </div>
           </div>
           <div className='image'>
-            <img src='images\Home-image.png' alt='Your Image' width='420' />
+            <img src='images/Home-image.png' alt='Your Image' width='420' />
           </div>
         </div>
       </div>
+
       <div className='heading-container' style={{ paddingBottom: '40px' }}>
-        <h3>Degree Programs</h3>
-        <h1 style={{ color: '#0056d2' }}>Get a head start on a degree today</h1>
-        <h4 style={{ color: '#404040', fontWeight: 400 }}>With these programs, you can build valuable skills, earn career credentials, and make progress toward a degree before you even enroll.</h4>
+        {/* Explore More Section */}
+      <div className='extra-tiles' style={{ marginTop: '50px', textAlign: 'center' }}>
+        <Heading size='lg' color='#0056d2' mb='6'>Explore More</Heading>
+        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
+          {[{
+            title: 'Game-Based Learning',
+            description: 'Engage in interactive learning with fun challenges.',
+            image: 'images/Game.jpg',
+            link: '/game-learning'
+          }, {
+            title: 'Module Page',
+            description: 'Explore structured learning modules.',
+            image: 'images/module-page.jpg',
+            link: '/modules'
+          }, {
+            title: 'Interview Practice',
+            description: 'Prepare for real-world interviews with AI feedback.',
+            image: 'images/interview-practice.jpg',
+            link: '/interview'
+          }].map(tile => (
+            <Card key={tile.title} boxShadow="xl" borderRadius="20px"
+              _hover={{ transform: 'scale(1.05)', transition: '0.3s', boxShadow: '0 10px 20px rgba(0,0,0,0.2)' }}>
+              <CardBody>
+                <Image src={tile.image} alt={tile.title} borderRadius="lg" />
+                <Stack mt="4" spacing="3">
+                  <Heading size="md">{tile.title}</Heading>
+                  <Text color='gray.600'>{tile.description}</Text>
+                </Stack>
+              </CardBody>
+              <CardFooter>
+                <Button as={Link} to={tile.link} colorScheme="blue">Explore</Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </SimpleGrid>
       </div>
-      <div className='card-container' >
+      </div>
+
+      <div className='card-container'>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100px' }}>
             <Spinner size="xl" color="blue.500" />
           </div>
         ) : (
-          <SimpleGrid
-            columns="repeat(auto-fill, minmax(250px, 1fr))"
-            spacing={8}
-            templateColumns="repeat(auto-fill, minmax(250px, 1fr))"
-          >
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8}>
             {courseDetails.map(course => (
-              <div key={course.id}>
-                <Card
-                  maxW="sm"
-                  borderRadius="20px"
-                  boxShadow="0 0 0 1px #c7c7c7"
-                  _hover={{ boxShadow: "0 8px 16px rgba(0, 0, 0, 0.2)" }}
-                >
-                  <CardBody>
-                    <Image
-                      src={COURSE_CARD_IMAGE}
-                      alt={course.name}
-                      borderRadius="lg"
-                    />
-                    <Stack mt="6" spacing="3">
-                      <div className="card-body d-flex align-items-center">
-                        <img
-                          src={COURSE_CARD_LOGO}
-                          className="card-logo-top img-with-border"
-                          alt="..."
-                        />
-                        <h6 style={{ color: "gray", fontWeight: 400, fontSize: 15, marginLeft: "10px" }}>
-                          {course.instructorName}
-                        </h6>
-                      </div>
-                      <Heading size="md">{course.title}</Heading>
-                      <Text noOfLines={3} overflow="hidden" textOverflow="ellipsis" color='grey'>
-                        {course.description}
-                      </Text>
-                    </Stack>
-                  </CardBody>
-                  <CardFooter>
-                    <div className="col text-start">
-                      <h6 style={{ color: "#0056d2", fontWeight: 400, fontSize: 15 }}>
-                        <i className="fa fa-graduation-cap" aria-hidden="true"></i> IT
-                      </h6>
-                      <h6 style={{ color: "gray", fontWeight: 400, fontSize: 15 }}>Degree</h6>
+              <Card key={course.id} maxW="sm" borderRadius="20px" boxShadow="0 0 0 1px #c7c7c7"
+                _hover={{ boxShadow: "0 8px 16px rgba(0, 0, 0, 0.2)", transform: 'scale(1.05)', transition: '0.3s' }}>
+                <CardBody>
+                  <Image src={COURSE_CARD_IMAGE} alt={course.name} borderRadius="lg" />
+                  <Stack mt="6" spacing="3">
+                    <div className="card-body d-flex align-items-center">
+                      <img src={COURSE_CARD_LOGO} className="card-logo-top img-with-border" alt="..." />
+                      <h6 style={{ color: "gray", fontWeight: 400, fontSize: 15, marginLeft: "10px" }}>{course.instructorName}</h6>
                     </div>
-                    <div className="col text-end">
-                      <a href={`/coursepage?id=${course._id}`}>
-                        <button
-                          className="btn rounded-circle shadow-lg"
-                          style={{
-                            width: "60px",
-                            height: "60px",
-                            borderRadius: "60px",
-                          }}
-                        >
-                          <i className="fa fa-arrow-right" style={{ fontSize: "25px" }}></i>
-                        </button>
-                      </a>
-                    </div>
-                  </CardFooter>
-                </Card>
-              </div>
+                    <Heading size="md">{course.title}</Heading>
+                    <Text noOfLines={3} overflow="hidden" textOverflow="ellipsis" color='grey'>{course.description}</Text>
+                  </Stack>
+                </CardBody>
+                <CardFooter>
+                  <Button as={Link} to={`/coursepage?id=${course._id}`} colorScheme="blue">
+                    Explore
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
           </SimpleGrid>
-
         )}
-        <div className="buttons" style={{ paddingTop: '30px' }}>
-          <Button bg='#0056d2' color='white' variant='solid' borderRadius='4px' size='lg' style={{ marginRight: '10px', marginTop: '10px' }}>
-            Show {courseDetails?.length} more
-          </Button>
-          <Button bg='white' color='#0056d2' borderColor='#0056d2' variant='outline' borderRadius='4px' size='lg' style={{ marginRight: '10px', marginTop: '10px' }}>
-            View all<i className="fa fa-arrow-right" style={{ fontSize: '20px', paddingLeft: '10px' }}></i>
-          </Button>
-        </div>
       </div>
     </div>
-
   );
 }
-
