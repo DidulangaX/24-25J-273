@@ -6,6 +6,12 @@ const router = express.Router();
 const adaptiveController = require('../controllers/adaptiveController');
 const AdaptiveUserPerformance = require('../models/UserPerformanceModel');
 const challengeController = require('../controllers/challengeController');
+
+
+// 1) create a new attempt
+router.post('/newAttempt', adaptiveController.createNewAttempt);
+
+
 // GET current question: /api/adaptive/currentQuestion?user_id=xxx
 router.get('/currentQuestion', adaptiveController.getCurrentQuestion);
 
@@ -14,19 +20,18 @@ router.post('/answer', adaptiveController.submitAnswer);
 
 // In adaptiveRoutes.js (or a new file):
 router.get('/leaderboard', async (req, res) => {
-    try {
-      // sort by total_score descending, limit to 10
-      const topUsers = await AdaptiveUserPerformance.find()
-        .sort({ total_score: -1 })
-        .limit(10)
-        .select('user_id total_score');
+  try {
+    const topUsers = await AdaptiveUserPerformance.find()
+      .sort({ total_score: -1 })
+      .limit(10)
+      .select('user_id total_score badge');  // <--- ensure we select 'badge'
 
-      res.json(topUsers);
-    } catch (err) {
-      console.error('Error fetching leaderboard:', err);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
+    res.json(topUsers);
+  } catch (err) {
+    console.error('Error fetching leaderboard:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
   // -------------------------
 // CHALLENGE endpoints
@@ -59,5 +64,13 @@ router.get('/challenge/:sessionId/submission/:participant', challengeSubmissionC
 
 // GET endpoint to finalize and retrieve challenge results
 router.get('/challenge/:sessionId/results', challengeController.finalizeChallengeSession);
+
+
+// 4) final summary for a specific attempt
+router.get('/finalSummary', adaptiveController.getFinalSummary);
+
+// 5) see all attempts
+router.get('/allAttempts', adaptiveController.getAllAttemptsForUser);
+
 
 module.exports = router;
