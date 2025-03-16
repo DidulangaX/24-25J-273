@@ -26,11 +26,16 @@ const UserPerformanceSchema = new mongoose.Schema({
     type: Map,
     of: Number,
     default: {
-      'Recursion': 0.5,
+      'Basic Syntax': 0.5,
       'File I/O': 0.5,
       'OOP': 0.5,
-      'Loops': 0.5,
-      'String Manipulation': 0.5
+      'Data Structures': 0.5,
+      'Algorithms': 0.5,
+      'Exceptions': 0.5,
+      'Generics': 0.5,
+      'Streams': 0.5,
+      'Multithreading': 0.5,
+      'Design Patterns': 0.5
     }
   },
   difficulty_mastery: {

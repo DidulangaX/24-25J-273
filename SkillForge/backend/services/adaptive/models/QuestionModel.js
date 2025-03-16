@@ -16,11 +16,16 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      'Recursion',
+      'Basic Syntax',
       'File I/O',
       'OOP',
-      'Loops',
-      'String Manipulation'
+      'Data Structures',
+      'Algorithms',
+      'Exceptions',
+      'Generics',
+      'Streams',
+      'Multithreading',
+      'Design Patterns'
     ]
   },
   difficulty: {
