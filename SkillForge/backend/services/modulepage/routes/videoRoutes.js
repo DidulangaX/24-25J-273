@@ -10,6 +10,7 @@ router.get("/:videoId/recommendations", videoController.getRecommendations);
 
 // Upload new video route
 router.post("/", upload.single("video"), videoController.createVideo);
+router.post("/clear-session", videoController.clearSession);
 
 // Basic video routes
 router.get("/", videoController.getVideos);

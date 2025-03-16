@@ -47,7 +47,9 @@ const createResource = asyncHandler(async (req, res) => {
 
     let filePath = "";
     if (req.file && type === "pdf") {
-      filePath = req.file.path;
+      const filename = path.basename(req.file.path);
+      filePath = `/uploads/pdfs/${filename}`;
+      console.log("Web-accessible PDF path:", filePath);
     }
 
     // Create resource object

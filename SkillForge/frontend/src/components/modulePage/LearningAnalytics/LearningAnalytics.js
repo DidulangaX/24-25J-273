@@ -1,7 +1,37 @@
-// Import statements at the top
-import React, { useState, useEffect } from "react";
+// src/components/modulePage/LearningAnalytics/LearningAnalytics.js
+import React, { useState } from "react";
 import axios from "axios";
-import "./LearningAnalytics.css";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Text,
+  List,
+  ListItem,
+  ListIcon,
+  Badge,
+  Progress,
+  Divider,
+  useColorModeValue,
+  Spinner,
+  Alert,
+  AlertIcon,
+  SimpleGrid,
+  Stack,
+  Card,
+  CardBody,
+  CardHeader,
+  CardFooter,
+  Icon,
+} from "@chakra-ui/react";
+import {
+  CheckCircleIcon,
+  InfoIcon,
+  WarningIcon,
+  TimeIcon,
+  RepeatIcon,
+} from "@chakra-ui/icons";
 
 const LearningAnalytics = ({ videoId, userId }) => {
   const [analytics, setAnalytics] = useState(null);
@@ -10,17 +40,23 @@ const LearningAnalytics = ({ videoId, userId }) => {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [resources, setResources] = useState([]);
 
+  // Chakra color mode values
+  const cardBg = useColorModeValue("white", "gray.700");
+  const difficultBg = useColorModeValue("red.50", "red.900");
+  const easyBg = useColorModeValue("green.50", "green.900");
+  const sectionBg = useColorModeValue("gray.50", "gray.700");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+
   const analyzeLearning = async () => {
     if (!videoId || !userId) return;
     setLoading(true);
     setError(null);
     try {
-      // Get difficulty detection results
       const response = await axios.post(
         `http://localhost:5000/api/videos/detect-difficulty/${videoId}`,
         { userId }
       );
-
+      console.log("Difficulty analysis response:", response.data);
       if (response.data && response.data.success) {
         setAnalytics(response.data);
 
@@ -97,12 +133,12 @@ const LearningAnalytics = ({ videoId, userId }) => {
     }
   };
 
-  // Helper to format video timestamp
+  // Helper to format time (seconds to MM:SS)
   const formatTime = (seconds) => {
     if (!seconds && seconds !== 0) return "--:--";
-    const mins = Math.floor(seconds / 60);
+    const minutes = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
   // Jump to a specific timestamp in the video
@@ -124,145 +160,270 @@ const LearningAnalytics = ({ videoId, userId }) => {
       window.open(`http://localhost:5000/uploads/pdfs/${filename}`, "_blank");
     } else if (resource.type === "text" && resource.content) {
       // Show text content in a modal or expand it in the UI
-      // (You'll need to implement a modal component for this)
       alert(resource.content);
     }
   };
 
+  // Get resource icon by type
+  const getResourceIcon = (type) => {
+    switch (type) {
+      case "pdf":
+        return "📄";
+      case "link":
+        return "🔗";
+      case "text":
+        return "📝";
+      default:
+        return "📚";
+    }
+  };
+
   return (
-    <div className="learning-analytics">
+    <Box width="100%">
       {!showAnalytics ? (
-        <button
-          className="analyze-button"
+        <Button
+          colorScheme="blue"
+          leftIcon={<InfoIcon />}
           onClick={() => {
             setShowAnalytics(true);
             analyzeLearning();
           }}
+          width={{ base: "full", md: "auto" }}
         >
           Analyze My Learning Pattern
-        </button>
+        </Button>
       ) : (
-        <div className="analytics-results">
-          {loading && (
-            <div className="loading">Analyzing your learning pattern...</div>
-          )}
-          {error && (
-            <div className="error-message">
-              <p>{error}</p>
-              <button onClick={() => setShowAnalytics(false)}>Close</button>
-            </div>
-          )}
-          {analytics && (
-            <div className="results-container">
-              <h3>Learning Analysis Results</h3>
-              <div className="difficulty-assessment">
-                <div className="difficulty-label">Content Difficulty:</div>
-                <div
-                  className={`difficulty-value ${
-                    analytics.prediction.predicted_difficulty === 1
-                      ? "difficult"
-                      : "easy"
-                  }`}
+        <Box
+          borderRadius="lg"
+          borderWidth="1px"
+          boxShadow="sm"
+          bg={cardBg}
+          overflow="hidden"
+        >
+          {loading ? (
+            <Flex direction="column" align="center" justify="center" p={10}>
+              <Spinner size="xl" color="blue.500" thickness="4px" mb={4} />
+              <Text color="gray.500">Analyzing your learning pattern...</Text>
+            </Flex>
+          ) : error ? (
+            <Alert status="error" borderRadius="md">
+              <AlertIcon />
+              <Box flex="1">
+                <Text>{error}</Text>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowAnalytics(false)}
+                  mt={2}
                 >
-                  {analytics.prediction.predicted_difficulty === 1
-                    ? "Challenging"
-                    : "Manageable"}
-                </div>
-                <div className="confidence">
-                  Confidence:{" "}
-                  {Math.round(analytics.prediction.confidence * 100)}%
-                </div>
-              </div>
+                  Close
+                </Button>
+              </Box>
+            </Alert>
+          ) : analytics ? (
+            <Box>
+              <Box
+                p={5}
+                bg={
+                  analytics.prediction.predicted_difficulty === 1
+                    ? difficultBg
+                    : easyBg
+                }
+                borderBottomWidth="1px"
+              >
+                <Heading size="md" mb={2}>
+                  Learning Analysis Results
+                </Heading>
+                <Flex
+                  align="center"
+                  justify="space-between"
+                  flexWrap="wrap"
+                  gap={3}
+                >
+                  <Stack>
+                    <Text fontWeight="bold">Content Difficulty:</Text>
+                    <Badge
+                      colorScheme={
+                        analytics.prediction.predicted_difficulty === 1
+                          ? "red"
+                          : "green"
+                      }
+                      fontSize="md"
+                      p={2}
+                      borderRadius="md"
+                    >
+                      {analytics.prediction.predicted_difficulty === 1
+                        ? "Challenging"
+                        : "Manageable"}
+                    </Badge>
+                  </Stack>
+
+                  <Box>
+                    <Text mb={1}>Confidence:</Text>
+                    <Progress
+                      value={Math.round(analytics.prediction.confidence * 100)}
+                      size="sm"
+                      colorScheme={
+                        analytics.prediction.predicted_difficulty === 1
+                          ? "red"
+                          : "green"
+                      }
+                      borderRadius="md"
+                      width="150px"
+                    />
+                    <Text fontSize="sm" mt={1} textAlign="center">
+                      {Math.round(analytics.prediction.confidence * 100)}%
+                    </Text>
+                  </Box>
+                </Flex>
+              </Box>
 
               {/* Insights Section */}
               {analytics.prediction.insights && (
-                <div className="insights">
-                  <h4>Analysis Insights:</h4>
-                  <ul>
+                <Box p={5} borderBottomWidth="1px">
+                  <Heading size="sm" mb={3}>
+                    Analysis Insights:
+                  </Heading>
+                  <List spacing={2}>
                     {analytics.prediction.insights.map((insight, index) => (
-                      <li key={index}>{insight}</li>
+                      <ListItem
+                        key={index}
+                        display="flex"
+                        alignItems="baseline"
+                      >
+                        <ListIcon as={InfoIcon} color="blue.500" />
+                        <Text>{insight}</Text>
+                      </ListItem>
                     ))}
-                  </ul>
-                </div>
+                  </List>
+                </Box>
               )}
 
               {/* Problematic Sections */}
               {analytics.interactionSummary.problematic_sections &&
                 analytics.interactionSummary.problematic_sections.length >
                   0 && (
-                  <div className="difficult-sections">
-                    <h4>Sections You Found Challenging:</h4>
-                    <ul>
+                  <Box p={5} borderBottomWidth="1px">
+                    <Heading size="sm" mb={3}>
+                      Sections You Found Challenging:
+                    </Heading>
+                    <List spacing={3}>
                       {analytics.interactionSummary.problematic_sections.map(
                         (section, index) => (
-                          <li key={index} className="section-item">
-                            <div className="section-details">
-                              <span className="section-time">
+                          <ListItem
+                            key={index}
+                            p={3}
+                            bg={sectionBg}
+                            borderRadius="md"
+                            borderLeftWidth="4px"
+                            borderLeftColor="red.400"
+                          >
+                            <Flex
+                              justify="space-between"
+                              align="center"
+                              mb={2}
+                              flexWrap="wrap"
+                              gap={2}
+                            >
+                              <Text fontWeight="medium">
                                 {formatTime(section.startTime)} -{" "}
                                 {formatTime(section.endTime)}
-                              </span>
-                              <button
-                                className="jump-button"
+                              </Text>
+                              <Button
+                                size="sm"
+                                colorScheme="blue"
+                                leftIcon={<TimeIcon />}
                                 onClick={() =>
                                   jumpToTimestamp(section.startTime)
                                 }
                               >
                                 Review Section
-                              </button>
-                            </div>
-                            <div className="section-metrics">
+                              </Button>
+                            </Flex>
+
+                            <Flex gap={4} fontSize="sm" color="gray.600" mt={1}>
                               {section.replayCount > 0 && (
-                                <span className="replay-info">
-                                  Replayed {section.replayCount} times
-                                </span>
+                                <Flex align="center">
+                                  <RepeatIcon mr={1} />
+                                  <Text>
+                                    Replayed {section.replayCount} times
+                                  </Text>
+                                </Flex>
                               )}
                               {section.pauseCount > 0 && (
-                                <span className="pause-info">
-                                  Paused {section.pauseCount} times
-                                </span>
+                                <Flex align="center">
+                                  <Icon as={() => <span>⏸️</span>} mr={1} />
+                                  <Text>Paused {section.pauseCount} times</Text>
+                                </Flex>
                               )}
-                            </div>
-                          </li>
+                            </Flex>
+                          </ListItem>
                         )
                       )}
-                    </ul>
-                  </div>
+                    </List>
+                  </Box>
                 )}
 
               {/* Recommendations */}
               {analytics.recommendations &&
                 analytics.recommendations.length > 0 && (
-                  <div className="recommendations">
-                    <h4>Personalized Recommendations:</h4>
-                    <ul>
+                  <Box p={5} borderBottomWidth="1px">
+                    <Heading size="sm" mb={3}>
+                      Personalized Recommendations:
+                    </Heading>
+                    <List spacing={2}>
                       {analytics.recommendations.map((rec, index) => (
-                        <li key={index}>{rec}</li>
+                        <ListItem
+                          key={index}
+                          display="flex"
+                          alignItems="baseline"
+                        >
+                          <ListIcon as={CheckCircleIcon} color="green.500" />
+                          <Text>{rec}</Text>
+                        </ListItem>
                       ))}
-                    </ul>
-                  </div>
+                    </List>
+                  </Box>
                 )}
 
               {/* Resource Recommendations */}
               {resources.length > 0 && (
-                <div className="recommended-resources">
-                  <h4>Learning Resources:</h4>
-                  <div className="resource-cards">
+                <Box p={5} borderBottomWidth="1px">
+                  <Heading size="sm" mb={3}>
+                    Learning Resources:
+                  </Heading>
+                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                     {resources.map((resource, index) => (
-                      <div className="resource-card" key={index}>
-                        <div className="resource-title">{resource.title}</div>
-                        <div className="resource-description">
-                          {resource.description}
-                        </div>
-                        {resource.sectionStart !== undefined &&
-                          resource.sectionEnd !== undefined && (
-                            <div className="resource-section">
-                              For section: {formatTime(resource.sectionStart)} -{" "}
-                              {formatTime(resource.sectionEnd)}
-                            </div>
-                          )}
-                        <div className="resource-actions">
-                          <button
-                            className="resource-button"
+                      <Card key={index} variant="outline" size="sm">
+                        <CardHeader pb={2}>
+                          <Flex align="center" gap={2}>
+                            <Text fontSize="xl">
+                              {getResourceIcon(resource.type)}
+                            </Text>
+                            <Heading size="xs">{resource.title}</Heading>
+                          </Flex>
+                        </CardHeader>
+                        <CardBody py={2}>
+                          <Text fontSize="sm" noOfLines={2}>
+                            {resource.description}
+                          </Text>
+                          {resource.sectionStart !== undefined &&
+                            resource.sectionEnd !== undefined && (
+                              <Badge
+                                mt={2}
+                                colorScheme="blue"
+                                variant="outline"
+                                fontSize="xs"
+                              >
+                                Section: {formatTime(resource.sectionStart)} -{" "}
+                                {formatTime(resource.sectionEnd)}
+                              </Badge>
+                            )}
+                        </CardBody>
+                        <CardFooter pt={2} justifyContent="space-between">
+                          <Button
+                            size="xs"
+                            colorScheme="blue"
                             onClick={() => openResource(resource)}
                           >
                             {resource.type === "link"
@@ -270,33 +431,46 @@ const LearningAnalytics = ({ videoId, userId }) => {
                               : resource.type === "pdf"
                               ? "View PDF"
                               : "Read Content"}
-                          </button>
+                          </Button>
                           {resource.sectionStart !== undefined && (
-                            <button
-                              className="section-jump-button"
+                            <Button
+                              size="xs"
+                              variant="ghost"
                               onClick={() =>
                                 jumpToTimestamp(resource.sectionStart)
                               }
                             >
                               Jump to Section
-                            </button>
+                            </Button>
                           )}
-                        </div>
-                      </div>
+                        </CardFooter>
+                      </Card>
                     ))}
-                  </div>
-                </div>
+                  </SimpleGrid>
+                </Box>
               )}
 
-              <div className="analytics-actions">
-                <button onClick={() => analyzeLearning()}>Refresh</button>
-                <button onClick={() => setShowAnalytics(false)}>Close</button>
-              </div>
-            </div>
-          )}
-        </div>
+              <Flex justify="flex-end" p={4} gap={3}>
+                <Button
+                  size="sm"
+                  leftIcon={<RepeatIcon />}
+                  onClick={() => analyzeLearning()}
+                >
+                  Refresh
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowAnalytics(false)}
+                >
+                  Close
+                </Button>
+              </Flex>
+            </Box>
+          ) : null}
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

@@ -1,7 +1,29 @@
-// src/components/admin/ResourceUpload.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import "./ResourceUpload.css";
+import {
+  Button,
+  Box,
+  Heading,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
+  Select,
+  Stack,
+  Flex,
+  Grid,
+  GridItem,
+  Card,
+  CardHeader,
+  CardBody,
+  Text,
+  Badge,
+  Alert,
+  AlertIcon,
+  FormHelperText,
+  Divider,
+} from "@chakra-ui/react";
+import { HiUpload } from "react-icons/hi";
 
 const ResourceUpload = () => {
   const [videos, setVideos] = useState([]);
@@ -158,178 +180,239 @@ const ResourceUpload = () => {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+    }
+  };
+
   return (
-    <div className="resource-upload-container">
-      <h2>Add Learning Resource</h2>
+    <Box maxW="1200px" mx="auto" p={4} pt={20}>
+      <Heading as="h2" mb={6}>
+        Add Learning Resource
+      </Heading>
 
       {message && (
-        <div
-          className={
-            message.includes("Error") ? "error-message" : "success-message"
-          }
+        <Alert
+          status={message.includes("Error") ? "error" : "success"}
+          mb={6}
+          borderRadius="md"
         >
+          <AlertIcon />
           {message}
-        </div>
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Resource Title:</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
-        </div>
+        <Box borderWidth="1px" borderRadius="lg" p={6} mb={6}>
+          <Heading as="h3" size="md" mb={2}>
+            Resource Details
+          </Heading>
+          <Text fontSize="sm" color="gray.600" mb={4}>
+            Provide information about the learning resource
+          </Text>
+          <Divider mb={4} />
 
-        <div className="form-group">
-          <label>Description:</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
-          />
-        </div>
+          <Stack spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Resource Title</FormLabel>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </FormControl>
 
-        <div className="form-group">
-          <label>Resource Type:</label>
-          <select value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="text">Text</option>
-            <option value="link">External Link</option>
-            <option value="pdf">PDF</option>
-          </select>
-        </div>
-
-        {type === "text" && (
-          <div className="form-group">
-            <label>Content:</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              required
-            />
-          </div>
-        )}
-
-        {type === "link" && (
-          <div className="form-group">
-            <label>URL:</label>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-            />
-          </div>
-        )}
-
-        {type === "pdf" && (
-          <div className="form-group">
-            <label>PDF File:</label>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={(e) => setFile(e.target.files[0])}
-              required
-            />
-          </div>
-        )}
-
-        <div className="form-group">
-          <label>For Difficulty Level:</label>
-          <select
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-          >
-            <option value="">All Difficulty Levels</option>
-            <option value="easy">Easy</option>
-            <option value="justright">Just Right</option>
-            <option value="difficult">Difficult</option>
-          </select>
-        </div>
-
-        <div className="form-section">
-          <h3>Section Specific Resource (Optional)</h3>
-
-          <div className="form-group">
-            <label>Video:</label>
-            <select value={selectedVideo} onChange={handleVideoSelect}>
-              <option value="">Select a video (optional)</option>
-              {videos.map((video) => (
-                <option key={video._id} value={video._id}>
-                  {video.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group time-inputs">
-            <div>
-              <label>Section Start (seconds):</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={sectionStart}
-                onChange={(e) => setSectionStart(e.target.value)}
+            <FormControl isRequired>
+              <FormLabel>Description</FormLabel>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
-            </div>
-            <div>
-              <label>Section End (seconds):</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={sectionEnd}
-                onChange={(e) => setSectionEnd(e.target.value)}
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Resource Type</FormLabel>
+              <Select value={type} onChange={(e) => setType(e.target.value)}>
+                <option value="text">Text</option>
+                <option value="link">Link</option>
+                <option value="pdf">PDF</option>
+              </Select>
+            </FormControl>
+
+            {type === "text" && (
+              <FormControl isRequired>
+                <FormLabel>Content</FormLabel>
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  minH="200px"
+                />
+              </FormControl>
+            )}
+
+            {type === "link" && (
+              <FormControl isRequired>
+                <FormLabel>URL</FormLabel>
+                <Input
+                  type="url"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                />
+              </FormControl>
+            )}
+
+            {type === "pdf" && (
+              <FormControl isRequired>
+                <FormLabel>PDF File</FormLabel>
+                <Flex alignItems="center">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    display="none"
+                    id="file-upload"
+                  />
+                  <Button
+                    as="label"
+                    htmlFor="file-upload"
+                    leftIcon={<HiUpload />}
+                    variant="outline"
+                    cursor="pointer"
+                  >
+                    Upload PDF
+                  </Button>
+                  {file && (
+                    <Text ml={4} fontSize="sm">
+                      {file.name}
+                    </Text>
+                  )}
+                </Flex>
+              </FormControl>
+            )}
+
+            <FormControl>
+              <FormLabel>For Difficulty Level</FormLabel>
+              <Select
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
+              >
+                <option value="">All Difficulty Levels</option>
+                <option value="easy">Easy</option>
+                <option value="justright">Just Right</option>
+                <option value="difficult">Difficult</option>
+              </Select>
+            </FormControl>
+          </Stack>
+        </Box>
+
+        <Box borderWidth="1px" borderRadius="lg" p={6} mb={6}>
+          <Heading as="h3" size="md" mb={2}>
+            Section Specific Resource (Optional)
+          </Heading>
+          <Text fontSize="sm" color="gray.600" mb={4}>
+            Link this resource to a specific video section
+          </Text>
+          <Divider mb={4} />
+
+          <Stack spacing={4}>
+            <FormControl>
+              <FormLabel>Video</FormLabel>
+              <Select value={selectedVideo} onChange={handleVideoSelect}>
+                <option value="">Select a video (optional)</option>
+                {videos.map((video) => (
+                  <option key={video._id} value={video._id}>
+                    {video.title}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Section Start (seconds)</FormLabel>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={sectionStart}
+                    onChange={(e) => setSectionStart(e.target.value)}
+                  />
+                </FormControl>
+              </GridItem>
+              <GridItem>
+                <FormControl>
+                  <FormLabel>Section End (seconds)</FormLabel>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={sectionEnd}
+                    onChange={(e) => setSectionEnd(e.target.value)}
+                  />
+                </FormControl>
+              </GridItem>
+            </Grid>
+
+            <FormControl>
+              <FormLabel>Tags (comma separated)</FormLabel>
+              <Input
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="e.g., functions, loops, basics"
               />
-            </div>
-          </div>
+            </FormControl>
+          </Stack>
+        </Box>
 
-          <div className="form-group">
-            <label>Tags (comma separated):</label>
-            <input
-              type="text"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="e.g., functions, loops, basics"
-            />
-          </div>
-        </div>
-
-        <button type="submit" className="submit-button" disabled={loading}>
-          {loading ? "Adding..." : "Add Resource"}
-        </button>
+        <Button
+          type="submit"
+          colorScheme="blue"
+          isLoading={loading}
+          loadingText="Adding..."
+          mb={8}
+        >
+          Add Resource
+        </Button>
       </form>
 
       {resources.length > 0 && (
-        <div className="existing-resources">
-          <h3>Existing Resources for Selected Video</h3>
-          <div className="resource-list">
+        <Box mt={6}>
+          <Heading as="h3" size="md" mb={4}>
+            Existing Resources for Selected Video
+          </Heading>
+          <Stack spacing={4}>
             {resources.map((resource) => (
-              <div key={resource._id} className="resource-item">
-                <div className="resource-title">{resource.title}</div>
-                <div className="resource-description">
-                  {resource.description}
-                </div>
-                {resource.sectionStart && resource.sectionEnd && (
-                  <div className="resource-section">
-                    Section: {formatTime(resource.sectionStart)} -{" "}
-                    {formatTime(resource.sectionEnd)}
-                  </div>
-                )}
-                <div className="resource-type">
-                  Type:{" "}
-                  {resource.type.charAt(0).toUpperCase() +
-                    resource.type.slice(1)}
-                </div>
-              </div>
+              <Card key={resource._id} variant="outline">
+                <CardHeader pb={2}>
+                  <Heading size="sm">{resource.title}</Heading>
+                </CardHeader>
+                <CardBody pt={0}>
+                  <Text fontSize="sm" color="gray.600" mb={2}>
+                    {resource.description}
+                  </Text>
+                  <Flex gap={2} wrap="wrap">
+                    <Badge colorScheme="blue">
+                      {resource.type.charAt(0).toUpperCase() +
+                        resource.type.slice(1)}
+                    </Badge>
+                    {resource.sectionStart && resource.sectionEnd && (
+                      <Badge colorScheme="purple">
+                        {formatTime(resource.sectionStart)} -{" "}
+                        {formatTime(resource.sectionEnd)}
+                      </Badge>
+                    )}
+                    {resource.recommendedFor && (
+                      <Badge colorScheme="green">
+                        {resource.recommendedFor.charAt(0).toUpperCase() +
+                          resource.recommendedFor.slice(1)}
+                      </Badge>
+                    )}
+                  </Flex>
+                </CardBody>
+              </Card>
             ))}
-          </div>
-        </div>
+          </Stack>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 };
 

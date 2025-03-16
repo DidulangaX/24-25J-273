@@ -13,6 +13,10 @@ const resourceSchema = new mongoose.Schema({
     enum: ["easy", "justright", "difficult", ""],
     default: "",
   },
+  difficultyTags: {
+    type: [String],
+    default: [],
+  },
   videoId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Video",
