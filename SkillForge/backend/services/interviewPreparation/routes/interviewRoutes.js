@@ -9,6 +9,6 @@ router.get('/questions/:id',authMiddleware.authenticateToken,interviewController
 router.get('/interview-questions', authMiddleware.authenticateToken, interviewController.getInterviewQuestions); // Get 10 random questions for the interview
 router.get('/session/questions', authMiddleware.authenticateToken, interviewController.getInterviewQuestions);
 router.get('/session/:sessionId/question/:index', authMiddleware.authenticateToken, interviewController.getQuestionByIndex);
-
+router.post("/submit-answer", authMiddleware.authenticateToken, interviewController.submitAnswer);
 
 module.exports = router;

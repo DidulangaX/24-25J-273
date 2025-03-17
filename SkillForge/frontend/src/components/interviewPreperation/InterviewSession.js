@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { Button, Container, Text, VStack, Box, Spinner, Progress, Flex } from "@chakra-ui/react";
+import { Button, Container, Text, VStack, Box, Spinner, Progress, Flex, IconButton } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Cookies from 'js-cookie';
 import CryptoJS from "crypto-js";
+import { FaVolumeUp } from "react-icons/fa"; // Import speaker icon
+import CodeEditor from "./CodeEditor";
+
 
 export default function InterviewSession() {
   const [questions, setQuestions] = useState([]);
@@ -31,6 +34,7 @@ export default function InterviewSession() {
           setQuestions(response.data.questions);
           setAnimatedText(response.data.questions[0]?.question || "Welcome to your interview!");
           setRoboExpression("🤔"); // Thinking emoji when question is displayed
+          playTextToSpeech(response.data.questions[0]?.question || "Welcome to your interview!"); // Speak question
         } else {
           console.error("API response does not contain a valid questions array", response.data);
         }
@@ -44,13 +48,26 @@ export default function InterviewSession() {
     fetchQuestions();
   }, []);
 
+  const playTextToSpeech = (text) => {
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US"; // Set language
+      utterance.rate = 1; // Adjust speech speed if needed
+      speechSynthesis.speak(utterance);
+    } else {
+      console.error("Text-to-Speech is not supported in this browser.");
+    }
+  };
+
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setRoboExpression("😊"); // Smiling before moving to next question
       setTimeout(() => {
+        const nextQuestion = questions[currentQuestionIndex + 1]?.question || "Good job! Interview complete.";
         setCurrentQuestionIndex((prev) => prev + 1);
-        setAnimatedText(questions[currentQuestionIndex + 1]?.question || "Good job! Interview complete.");
+        setAnimatedText(nextQuestion);
         setRoboExpression("🤔"); // Back to thinking when new question appears
+        playTextToSpeech(nextQuestion); // Speak new question
       }, 500);
     } else {
       navigate("/interview-complete");
@@ -77,8 +94,8 @@ export default function InterviewSession() {
     <Container 
       centerContent 
       maxW="1000px" 
-      h="500px"  // Reduced height for laptop screen look
-      mt={100}    // ⬅️ Added margin-top to move container down
+      h="600px"  // Reduced height for laptop screen look
+      mt={12}    // Move interview container down
       py={6}
       display="flex"
       flexDirection="column"
@@ -130,7 +147,7 @@ export default function InterviewSession() {
         </Box>
       </motion.div>
 
-      {/* Speech Bubble */}
+      {/* Speech Bubble with Sound Button */}
       <motion.div
         key={currentQuestionIndex}
         initial={{ opacity: 0, scale: 0.8 }}
@@ -146,10 +163,26 @@ export default function InterviewSession() {
           maxW="80%"
           textAlign="center"
           mt={4}
+          position="relative"
         >
           <Text fontSize="lg" fontWeight="medium">{animatedText}</Text>
+          
+          {/* Sound Button */}
+          <IconButton 
+            aria-label="Play Question"
+            icon={<FaVolumeUp />}
+            colorScheme="whiteAlpha"
+            color="white"
+            size="sm"
+            position="absolute"
+            bottom="-10px"
+            right="-10px"
+            onClick={() => playTextToSpeech(animatedText)}
+          />
         </Box>
       </motion.div>
+      <CodeEditor question={animatedText} />
+
 
       {/* Next Button Positioned to the Right */}
       <Flex justify="flex-end" width="100%" mt={5}>
