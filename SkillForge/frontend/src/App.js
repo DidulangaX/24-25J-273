@@ -41,6 +41,9 @@ import { handleLogout } from "./utils/utility.js";
 import ModulePage from "./components/modulePage/ModulePage";
 import VideoUpload from "./components/admin/VideoUpload";
 import ResourceUpload from "./components/admin/ResourceUpload.js";
+import ModuleDashboard from "./components/admin/ModuleDashboard";
+import EditVideoUpload from "./components/admin/EditVideoUpload";
+import EditResourceUpload from "./components/admin/EditResourceUpload";
 
 export default function App() {
   const authToken = Cookies.get("authToken");
@@ -162,6 +165,39 @@ export default function App() {
           element={
             isLoggedIn && (isAdmin || isInstructor) ? (
               <ResourceUpload />
+            ) : (
+              <Error />
+            )
+          }
+        />
+
+        <Route
+          path="/module-dashboard"
+          element={
+            isLoggedIn && (isAdmin || isInstructor) ? (
+              <ModuleDashboard />
+            ) : (
+              <Error />
+            )
+          }
+        />
+
+        <Route
+          path="/edit-video/:videoId"
+          element={
+            isLoggedIn && (isAdmin || isInstructor) ? (
+              <EditVideoUpload />
+            ) : (
+              <Error />
+            )
+          }
+        />
+
+        <Route
+          path="/edit-resource/:resourceId"
+          element={
+            isLoggedIn && (isAdmin || isInstructor) ? (
+              <EditResourceUpload />
             ) : (
               <Error />
             )

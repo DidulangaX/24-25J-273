@@ -721,11 +721,12 @@ function getEngagementLevel(score) {
   return "Very Low Engagement";
 }
 
-// Replace submitDifficultyFeedback in your videoController.js
+//  update submitDifficultyFeedback in videoController.js
 
 exports.submitDifficultyFeedback = async (req, res) => {
   try {
     const { videoId, userId, perceivedDifficulty, comments } = req.body;
+
     console.log(
       `User ${userId} feedback for video ${videoId}: ${perceivedDifficulty}`
     );
@@ -773,157 +774,198 @@ exports.submitDifficultyFeedback = async (req, res) => {
       });
     }
 
-    // Update the model with interaction data if available
-    if (sessionInteractions[videoId] && sessionInteractions[videoId][userId]) {
-      const interactions = sessionInteractions[videoId][userId];
-      const interactionData = processInteractions(
-        interactions,
-        video.duration || 300
-      );
+    // Prepare recommendation response based on difficulty
+    const recommendationResponse = {
+      resources: [],
+      nextVideo: null,
+      learningPath: [],
+      difficulty: perceivedDifficulty,
+    };
 
-      // Log the interaction data for debugging
-      console.log("Interaction data for model update:", interactionData);
+    // Get resources based on difficulty
+    let resourceQuery = {
+      recommendedFor: perceivedDifficulty,
+    };
 
-      // Update the model
-      try {
-        const userFeedbackNumeric = perceivedDifficulty === "difficult" ? 1 : 0;
-        const updateResult = await difficultyService.updateModel(
-          interactionData,
-          userFeedbackNumeric
-        );
-        console.log("Model update result:", updateResult);
-      } catch (updateError) {
-        console.error("Error updating model:", updateError);
-      }
-    }
-
-    // Get recommendations based on difficulty feedback
-    console.log(
-      `Getting resources for difficulty level: ${perceivedDifficulty}`
-    );
-
-    try {
-      // Find resources based on difficulty
-      const resourceQuery = { recommendedFor: perceivedDifficulty };
-
-      // If the video has a category, prioritize resources in that category
-      if (video.category && video.category !== "general") {
-        resourceQuery.$or = [
-          { category: video.category },
-          { tags: { $in: [video.category] } },
-        ];
-      }
-
-      console.log("Resource query:", JSON.stringify(resourceQuery));
-
-      // Find resources matching criteria
-      const resources = await Resource.find(resourceQuery).limit(5);
-      console.log(
-        `Found ${resources.length} resources for ${perceivedDifficulty} difficulty`
-      );
-
-      // If no resources found with exact difficulty, use a more flexible query
-      let finalResources = resources;
-      if (resources.length === 0) {
-        // Try getting any resources
-        const fallbackResources = await Resource.find({}).limit(3);
-        finalResources = fallbackResources;
-        console.log(`Using ${fallbackResources.length} fallback resources`);
-      }
-
-      // Find a recommended video based on difficulty
-      let videoQuery = { _id: { $ne: videoId } };
-
-      // Add category if available
-      if (video.category) {
-        videoQuery.category = video.category;
-      }
-
-      // Adjust difficulty based on user's feedback
-      if (perceivedDifficulty === "difficult") {
-        // Recommend easier content
-        videoQuery.difficultyLevel = "beginner";
-      } else if (perceivedDifficulty === "easy") {
-        // Recommend more advanced content
-        videoQuery.difficultyLevel = "advanced";
-      }
-
-      console.log("Video query:", JSON.stringify(videoQuery));
-
-      // Find a suitable video
-      const recommendedVideo = await Video.findOne(videoQuery);
-      console.log(
-        `Found recommended video: ${
-          recommendedVideo ? recommendedVideo.title : "None"
-        }`
-      );
-
-      // Format resources
-      const formattedResources = finalResources.map((resource) => ({
-        _id: resource._id.toString(),
+    // If no specific resources for this difficulty, get general ones
+    const specificResources = await Resource.find(resourceQuery).limit(3);
+    if (specificResources.length > 0) {
+      recommendationResponse.resources = specificResources.map((resource) => ({
+        _id: resource._id,
         title: resource.title || "Learning Resource",
         description: resource.description || "Additional learning material",
         type: resource.type || "text",
-        url:
-          resource.type === "pdf"
-            ? `/direct-pdf/${path.basename(resource.filePath)}`
-            : resource.url || "",
+        url: formatResourceUrl(resource),
         content: resource.type === "text" ? resource.content : undefined,
+        recommendedFor: resource.recommendedFor || "",
+        category: resource.category || "",
       }));
-
-      // Format video if found
-      const formattedVideo = recommendedVideo
-        ? {
-            _id: recommendedVideo._id,
-            title: recommendedVideo.title,
-            description: recommendedVideo.description || "",
-            difficultyLevel: recommendedVideo.difficultyLevel,
-            category: recommendedVideo.category,
-            type: "video",
-            url: `/api/videos/stream/${recommendedVideo._id}`,
-          }
-        : null;
-
-      // Create recommendations object
-      const recommendations = {
-        resources: formattedResources,
-        video: formattedVideo,
-      };
-
-      console.log("Sending recommendations:", {
-        resourceCount: formattedResources.length,
-        hasVideo: !!formattedVideo,
-      });
-
-      // Return response with recommendations
-      return res.json({
-        message: "Feedback received and processed",
-        success: true,
-        recommendations,
-      });
-    } catch (recError) {
-      console.error("Error getting recommendations:", recError);
-      // Return a basic success response even if recommendations fail
-      return res.json({
-        message:
-          "Feedback received, but there was an error getting recommendations",
-        success: true,
-        recommendations: {
-          resources: [],
-          video: null,
-        },
-      });
+    } else {
+      // Fallback to any resources if none specific to this difficulty
+      const anyResources = await Resource.find({}).limit(3);
+      recommendationResponse.resources = anyResources.map((resource) => ({
+        _id: resource._id,
+        title: resource.title || "Learning Resource",
+        description: resource.description || "Additional learning material",
+        type: resource.type || "text",
+        url: formatResourceUrl(resource),
+        content: resource.type === "text" ? resource.content : undefined,
+        recommendedFor: resource.recommendedFor || "",
+        category: resource.category || "",
+      }));
     }
+
+    // Generate next video recommendation - need simple logic to find another video
+    // based on difficulty level
+    let videoQuery = { _id: { $ne: videoId } }; // Don't recommend the same video
+
+    // Adjust the query based on difficulty feedback
+    if (perceivedDifficulty === "difficult") {
+      // If user found it difficult, recommend easier content
+      videoQuery.difficultyLevel = "beginner";
+    } else if (perceivedDifficulty === "easy") {
+      // If user found it easy, recommend more advanced content
+      videoQuery.difficultyLevel = "advanced";
+    } else {
+      // For "just right", find similar difficulty
+      videoQuery.difficultyLevel = video.difficultyLevel || "intermediate";
+    }
+
+    // Try to find a video matching criteria
+    const nextVideo = await Video.findOne(videoQuery);
+    if (nextVideo) {
+      recommendationResponse.nextVideo = {
+        _id: nextVideo._id,
+        title: nextVideo.title,
+        description: nextVideo.description || "",
+        difficultyLevel: nextVideo.difficultyLevel || "intermediate",
+        category: nextVideo.category || "general",
+        type: "video",
+        url: `/api/videos/stream/${nextVideo._id}`,
+        thumbnailPath: nextVideo.thumbnailPath || "",
+      };
+    }
+
+    // Generate learning path (3 videos in progression)
+    // Different strategies based on difficulty
+    let pathQuery = { _id: { $ne: videoId } };
+
+    if (perceivedDifficulty === "difficult") {
+      // For difficult feedback, create a path of increasingly difficult videos
+      // starting from easier content
+      const easyVideos = await Video.find({
+        difficultyLevel: "beginner",
+        _id: { $ne: videoId },
+      }).limit(1);
+
+      const intermediateVideos = await Video.find({
+        difficultyLevel: "intermediate",
+        _id: { $ne: videoId },
+      }).limit(1);
+
+      const advancedVideos = await Video.find({
+        difficultyLevel: "advanced",
+        _id: { $ne: videoId },
+      }).limit(1);
+
+      recommendationResponse.learningPath = [
+        ...easyVideos,
+        ...intermediateVideos,
+        ...advancedVideos,
+      ].map((video) => ({
+        _id: video._id,
+        title: video.title,
+        description: video.description || "",
+        difficultyLevel: video.difficultyLevel || "intermediate",
+        category: video.category || "general",
+        type: "video",
+        url: `/api/videos/stream/${video._id}`,
+        thumbnailPath: video.thumbnailPath || "",
+      }));
+    } else if (perceivedDifficulty === "easy") {
+      // For easy feedback, provide more challenging content
+      const advancedVideos = await Video.find({
+        difficultyLevel: "advanced",
+        _id: { $ne: videoId },
+      }).limit(3);
+
+      recommendationResponse.learningPath = advancedVideos.map((video) => ({
+        _id: video._id,
+        title: video.title,
+        description: video.description || "",
+        difficultyLevel: video.difficultyLevel || "advanced",
+        category: video.category || "general",
+        type: "video",
+        url: `/api/videos/stream/${video._id}`,
+        thumbnailPath: video.thumbnailPath || "",
+      }));
+    } else {
+      // For "just right", provide a balanced mix
+      const allVideos = await Video.find({
+        _id: { $ne: videoId },
+      }).limit(3);
+
+      recommendationResponse.learningPath = allVideos.map((video) => ({
+        _id: video._id,
+        title: video.title,
+        description: video.description || "",
+        difficultyLevel: video.difficultyLevel || "intermediate",
+        category: video.category || "general",
+        type: "video",
+        url: `/api/videos/stream/${video._id}`,
+        thumbnailPath: video.thumbnailPath || "",
+      }));
+    }
+
+    console.log(
+      `Generated recommendations for ${perceivedDifficulty} difficulty:`,
+      {
+        resourcesCount: recommendationResponse.resources.length,
+        hasNextVideo: !!recommendationResponse.nextVideo,
+        learningPathCount: recommendationResponse.learningPath.length,
+      }
+    );
+
+    return res.json({
+      message: "Feedback received and processed",
+      recommendations: recommendationResponse,
+      success: true,
+    });
   } catch (error) {
     console.error("Error in submitDifficultyFeedback:", error);
-    res.status(500).json({
-      message: "Internal server error",
+    return res.status(500).json({
+      message: "Server error",
       error: error.message,
       success: false,
-      recommendations: { resources: [], video: null },
+      // Return empty but valid recommendations structure
+      recommendations: {
+        resources: [],
+        nextVideo: null,
+        learningPath: [],
+        difficulty: "justright",
+      },
     });
   }
 };
+
+// Helper function to format resource URL
+function formatResourceUrl(resource) {
+  if (!resource) return "";
+
+  if (resource.type === "pdf" && resource.filePath) {
+    // Extract filename for PDFs
+    const filename =
+      typeof resource.filePath === "string"
+        ? resource.filePath.split(/[\/\\]/).pop()
+        : null;
+
+    return filename ? `/direct-pdf/${filename}` : "";
+  } else if (resource.type === "link") {
+    return resource.url || "";
+  }
+
+  return "";
+}
 
 // Replace the getRecommendationsForVideo function in the backend's videoController.js
 async function getRecommendationsForVideo(videoId, difficulty) {

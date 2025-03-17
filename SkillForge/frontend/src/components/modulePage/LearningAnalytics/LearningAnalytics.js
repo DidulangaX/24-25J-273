@@ -1,4 +1,3 @@
-// src/components/modulePage/LearningAnalytics/LearningAnalytics.js
 import React, { useState } from "react";
 import axios from "axios";
 import {
@@ -12,7 +11,6 @@ import {
   ListIcon,
   Badge,
   Progress,
-  Divider,
   useColorModeValue,
   Spinner,
   Alert,
@@ -28,7 +26,6 @@ import {
 import {
   CheckCircleIcon,
   InfoIcon,
-  WarningIcon,
   TimeIcon,
   RepeatIcon,
 } from "@chakra-ui/icons";
@@ -45,7 +42,6 @@ const LearningAnalytics = ({ videoId, userId }) => {
   const difficultBg = useColorModeValue("red.50", "red.900");
   const easyBg = useColorModeValue("green.50", "green.900");
   const sectionBg = useColorModeValue("gray.50", "gray.700");
-  const borderColor = useColorModeValue("gray.200", "gray.600");
 
   const analyzeLearning = async () => {
     if (!videoId || !userId) return;

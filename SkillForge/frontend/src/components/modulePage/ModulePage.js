@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-// src/components/modulePage/ModulePage.js
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
@@ -11,6 +9,7 @@ import FeedbackPrompt from "./FeedbackPrompt/FeedbackPrompt";
 import ResourceViewer from "./ResourceViewer/ResourceViewer";
 import InteractionGuidance from "./InteractionGuidance/InteractionGuidance";
 import PersonalizedRecommendationsPanel from "./RecommendationsPanel/PersonalizedRecommendationsPanel";
+
 
 import {
   Box,
@@ -34,6 +33,12 @@ import {
   Tooltip,
   Icon,
   Collapse,
+  Input,
+  InputGroup,
+  InputLeftElement,
+  Select,
+  HStack,
+  VStack,
 } from "@chakra-ui/react";
 import {
   InfoIcon,
@@ -41,16 +46,23 @@ import {
   ExternalLinkIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
+  SearchIcon,
 } from "@chakra-ui/icons";
-import { FaPlay, FaLightbulb } from "react-icons/fa";
+import { FaPlay, FaLightbulb, FaFilter } from "react-icons/fa";
 
 const ModulePage = ({ userId = "user123" }) => {
   const { videoId } = useParams();
   const [videos, setVideos] = useState([]);
+  const [filteredVideos, setFilteredVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showPlayer, setShowPlayer] = useState(false);
+
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
 
   // Personalized recommendations state
   const [personalizedRecommendations, setPersonalizedRecommendations] =
@@ -72,6 +84,7 @@ const ModulePage = ({ userId = "user123" }) => {
   );
   const textColor = useColorModeValue("gray.700", "white");
   const borderColor = useColorModeValue("gray.200", "gray.600");
+  const headerBg = useColorModeValue("blue.50", "blue.900");
 
   // Fetch all videos
   useEffect(() => {
@@ -81,6 +94,7 @@ const ModulePage = ({ userId = "user123" }) => {
         const response = await axios.get("http://localhost:5000/api/videos");
         if (response.data.length > 0) {
           setVideos(response.data);
+          setFilteredVideos(response.data);
           // If videoId is provided in URL, use that video
           if (videoId) {
             const video = response.data.find((v) => v._id === videoId);
@@ -107,6 +121,39 @@ const ModulePage = ({ userId = "user123" }) => {
     };
     fetchVideos();
   }, [videoId]);
+
+  // Filter videos when search term or filters change
+  useEffect(() => {
+    if (videos.length === 0) return;
+
+    const filtered = videos.filter((video) => {
+      // Apply search term filter (case insensitive)
+      const matchesSearch =
+        searchTerm === "" ||
+        video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (video.description &&
+          video.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (video.category &&
+          video.category.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      // Apply difficulty filter
+      const matchesDifficulty =
+        difficultyFilter === "" || video.difficultyLevel === difficultyFilter;
+
+      // Apply category filter
+      const matchesCategory =
+        categoryFilter === "" || video.category === categoryFilter;
+
+      return matchesSearch && matchesDifficulty && matchesCategory;
+    });
+
+    setFilteredVideos(filtered);
+  }, [searchTerm, difficultyFilter, categoryFilter, videos]);
+
+  // Extract unique categories for filter dropdown
+  const categories = [
+    ...new Set(videos.map((video) => video.category).filter(Boolean)),
+  ];
 
   const handleSelectVideo = (video) => {
     setSelectedVideo(video);
@@ -144,7 +191,24 @@ const ModulePage = ({ userId = "user123" }) => {
     }
   };
 
-  // Handle feedback submission with personalized recommendations
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleDifficultyFilterChange = (e) => {
+    setDifficultyFilter(e.target.value);
+  };
+
+  const handleCategoryFilterChange = (e) => {
+    setCategoryFilter(e.target.value);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setDifficultyFilter("");
+    setCategoryFilter("");
+  };
+
   const handleFeedbackSubmit = async (difficulty, responseData) => {
     console.log(`Feedback received with difficulty: ${difficulty}`);
 
@@ -163,6 +227,9 @@ const ModulePage = ({ userId = "user123" }) => {
       isClosable: true,
     });
 
+    // Debug: Log full response data
+    console.log("Full response from feedback:", responseData);
+
     // Validate response data
     if (!responseData || !responseData.success) {
       console.error("Invalid response from server:", responseData);
@@ -172,43 +239,57 @@ const ModulePage = ({ userId = "user123" }) => {
       return;
     }
 
-    console.log(
-      "Setting personalized recommendations from response:",
-      responseData.recommendations
-    );
-
     // Set recommendations from response
     if (responseData.recommendations) {
-      setPersonalizedRecommendations(responseData.recommendations);
+      // Create a formatted recommendations object with the explicit difficulty
+      const formattedRecommendations = {
+        resources: Array.isArray(responseData.recommendations.resources)
+          ? responseData.recommendations.resources
+          : [],
+        nextVideo: responseData.recommendations.nextVideo || null,
+        learningPath: responseData.recommendations.learningPath || [],
+        // IMPORTANT: Make sure difficulty is explicitly set from user feedback
+        difficulty: difficulty,
+      };
+
+      console.log("Storing recommendations with difficulty:", difficulty);
+      console.log("Formatted recommendations:", formattedRecommendations);
+
+      setPersonalizedRecommendations(formattedRecommendations);
       setRecommendationsLoading(false);
 
-      // Show success toast for personalized content
-      const resourceCount = responseData.recommendations.resources?.length || 0;
-      const hasNextVideo = !!responseData.recommendations.nextVideo;
-      const hasLearningPath =
-        responseData.recommendations.learningPath?.length > 0;
+      // Show success toast for resources
+      const resourceCount = formattedRecommendations.resources.length;
+      const hasNextVideo = !!formattedRecommendations.nextVideo;
+      const hasLearningPath = formattedRecommendations.learningPath.length > 0;
 
       if (resourceCount > 0 || hasNextVideo || hasLearningPath) {
         let message = [];
         if (resourceCount > 0) {
           message.push(
-            `${resourceCount} personalized resource${
-              resourceCount > 1 ? "s" : ""
-            }`
+            `${resourceCount} learning resource${resourceCount > 1 ? "s" : ""}`
           );
         }
         if (hasNextVideo) {
           message.push("a recommended next video");
         }
         if (hasLearningPath) {
-          message.push("a customized learning path");
+          message.push("a personalized learning path");
         }
 
         toast({
-          title: "Personalized Learning Plan",
-          description: `We've created ${message.join(
+          title: "Learning Recommendations Ready",
+          description: `We've prepared ${message.join(
             ", "
           )} based on your feedback.`,
+          status: "info",
+          duration: 5000,
+          isClosable: true,
+        });
+      } else {
+        toast({
+          title: "Learning Tips Available",
+          description: "We've provided learning tips based on your feedback.",
           status: "info",
           duration: 5000,
           isClosable: true,
@@ -216,13 +297,24 @@ const ModulePage = ({ userId = "user123" }) => {
       }
     } else {
       // If no recommendations, create a basic structure with difficulty
-      setPersonalizedRecommendations({
+      const basicRecommendations = {
         resources: [],
         nextVideo: null,
         learningPath: [],
         difficulty: difficulty,
-      });
+      };
+
+      setPersonalizedRecommendations(basicRecommendations);
       setRecommendationsLoading(false);
+
+      toast({
+        title: "Learning Tips Available",
+        description:
+          "We've provided basic learning tips based on your feedback.",
+        status: "info",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
@@ -350,9 +442,18 @@ const ModulePage = ({ userId = "user123" }) => {
   // Return complete UI based on state
   return (
     <Box maxW="1200px" mx="auto" p={4} pt={20}>
-      <Heading as="h2" size="xl" textAlign="center" mb={8}>
-        Learning Modules
-      </Heading>
+      {/* Welcome Header - Only show when not viewing a video */}
+      {!showPlayer && !viewingResource && (
+        <Box bg="blue.500" p={6} borderRadius="xl" mb={8} boxShadow="md">
+          <Heading as="h1" size="xl" textAlign="center" color="white">
+            Welcome to the SkillForge Module Page
+          </Heading>
+          <Text textAlign="center" color="white" mt={2} fontSize="lg">
+            Explore our learning modules to build your skills
+          </Text>
+        </Box>
+      )}
+
       {viewingResource ? (
         // Resource Viewer
         <ResourceViewer
@@ -360,110 +461,197 @@ const ModulePage = ({ userId = "user123" }) => {
           onBack={() => setViewingResource(null)}
         />
       ) : !showPlayer ? (
-        // Video Grid
-        <Grid
-          templateColumns={{
-            base: "1fr",
-            sm: "repeat(auto-fill, minmax(280px, 1fr))",
-          }}
-          gap={6}
-        >
-          {videos.map((video) => (
-            <Card
-              key={video._id}
-              maxW="sm"
-              overflow="hidden"
-              cursor="pointer"
-              onClick={() => handleSelectVideo(video)}
-              bg={cardBg}
-              boxShadow="md"
-              transition="transform 0.3s, box-shadow 0.3s"
-              _hover={{
-                transform: "translateY(-8px)",
-                boxShadow: "lg",
-              }}
-              h="100%"
-            >
-              <Box position="relative" height="180px" overflow="hidden">
-                <Image
-                  src={getThumbnailUrl(video)}
-                  alt={video.title}
-                  objectFit="cover"
-                  width="100%"
-                  height="100%"
-                  fallback={
-                    <Box
-                      bgGradient={bgGradient}
-                      height="100%"
-                      width="100%"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <Text
-                        fontSize="5xl"
-                        fontWeight="bold"
-                        color="white"
-                        opacity={0.8}
-                      >
-                        {video.title.substring(0, 2).toUpperCase()}
-                      </Text>
-                    </Box>
-                  }
-                />
-                <Badge
-                  position="absolute"
-                  top="2"
-                  right="2"
-                  colorScheme={
-                    getDifficultyProps(video.difficultyLevel).colorScheme
-                  }
-                  px="2"
-                  py="1"
-                  borderRadius="md"
+        // Search/Filter Bar and Video Grid
+        <Box>
+          {/* Search and Filter Bar */}
+          <Box mb={8} p={4} bg="white" borderRadius="lg" boxShadow="sm">
+            {/* Search input */}
+            <InputGroup mb={4}>
+              <InputLeftElement pointerEvents="none">
+                <SearchIcon color="gray.400" />
+              </InputLeftElement>
+              <Input
+                placeholder="Search for videos..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+              />
+            </InputGroup>
+
+            {/* Filter controls - Mobile first approach */}
+            <Flex wrap="wrap" gap={3}>
+              <Box flex="1" minW="200px">
+                <Select
+                  placeholder="Difficulty Level"
+                  value={difficultyFilter}
+                  onChange={handleDifficultyFilterChange}
+                  bg="white"
+                  border="1px solid"
+                  borderColor="gray.200"
+                  h="40px"
                 >
-                  {getDifficultyProps(video.difficultyLevel).text}
-                </Badge>
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </Select>
               </Box>
 
-              <CardBody pb={2}>
-                <Text
-                  fontSize="xs"
-                  fontWeight="bold"
-                  color="gray.500"
-                  textTransform="uppercase"
-                  mb={2}
+              <Box flex="1" minW="200px">
+                <Select
+                  placeholder="Category"
+                  value={categoryFilter}
+                  onChange={handleCategoryFilterChange}
+                  bg="white"
+                  border="1px solid"
+                  borderColor="gray.200"
+                  h="40px"
                 >
-                  {video.category}
-                </Text>
-                <Heading size="md" mb={2}>
-                  {video.title}
-                </Heading>
-                <Text color={textColor} noOfLines={2}>
-                  {video.description || "No description available"}
-                </Text>
-                <Text fontSize="sm" color="gray.500" mt={2}>
-                  Duration:{" "}
-                  {video.duration
-                    ? `${Math.floor(video.duration / 60)}:${String(
-                        video.duration % 60
-                      ).padStart(2, "0")}`
-                    : "10:00"}
-                </Text>
-              </CardBody>
-              <CardFooter pt={0} mt="auto">
+                  {categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </Select>
+              </Box>
+
+              <Box>
                 <Button
-                  colorScheme="blue"
-                  size="sm"
-                  width="full"
-                  leftIcon={<Icon as={FaPlay} />}
+                  colorScheme="gray"
+                  onClick={handleClearFilters}
+                  leftIcon={<Icon as={FaFilter} />}
+                  h="40px"
                 >
-                  Watch Now
+                  Clear Filters
                 </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </Grid>
+              </Box>
+            </Flex>
+          </Box>
+
+          {/* Results count and feedback */}
+          <Box mb={4} pl={2}>
+            <Text color="gray.600" fontSize="sm">
+              Showing {filteredVideos.length} of {videos.length} videos
+            </Text>
+          </Box>
+
+          {/* Video Grid */}
+          {filteredVideos.length > 0 ? (
+            <Grid
+              templateColumns={{
+                base: "1fr",
+                sm: "repeat(auto-fill, minmax(280px, 1fr))",
+              }}
+              gap={6}
+            >
+              {filteredVideos.map((video) => (
+                <Card
+                  key={video._id}
+                  maxW="sm"
+                  overflow="hidden"
+                  cursor="pointer"
+                  onClick={() => handleSelectVideo(video)}
+                  bg={cardBg}
+                  boxShadow="md"
+                  transition="transform 0.3s, box-shadow 0.3s"
+                  _hover={{
+                    transform: "translateY(-8px)",
+                    boxShadow: "lg",
+                  }}
+                  h="100%"
+                >
+                  <Box position="relative" height="180px" overflow="hidden">
+                    <Image
+                      src={getThumbnailUrl(video)}
+                      alt={video.title}
+                      objectFit="cover"
+                      width="100%"
+                      height="100%"
+                      fallback={
+                        <Box
+                          bgGradient={bgGradient}
+                          height="100%"
+                          width="100%"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                        >
+                          <Text
+                            fontSize="5xl"
+                            fontWeight="bold"
+                            color="white"
+                            opacity={0.8}
+                          >
+                            {video.title.substring(0, 2).toUpperCase()}
+                          </Text>
+                        </Box>
+                      }
+                    />
+                    <Badge
+                      position="absolute"
+                      top="2"
+                      right="2"
+                      colorScheme={
+                        getDifficultyProps(video.difficultyLevel).colorScheme
+                      }
+                      px="2"
+                      py="1"
+                      borderRadius="md"
+                    >
+                      {getDifficultyProps(video.difficultyLevel).text}
+                    </Badge>
+                  </Box>
+
+                  <CardBody pb={2}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="bold"
+                      color="gray.500"
+                      textTransform="uppercase"
+                      mb={2}
+                    >
+                      {video.category}
+                    </Text>
+                    <Heading size="md" mb={2}>
+                      {video.title}
+                    </Heading>
+                    <Text color={textColor} noOfLines={2}>
+                      {video.description || "No description available"}
+                    </Text>
+                    <Text fontSize="sm" color="gray.500" mt={2}>
+                      Duration:{" "}
+                      {video.duration
+                        ? `${Math.floor(video.duration / 60)}:${String(
+                            video.duration % 60
+                          ).padStart(2, "0")}`
+                        : "10:00"}
+                    </Text>
+                  </CardBody>
+                  <CardFooter pt={0} mt="auto">
+                    <Button
+                      colorScheme="blue"
+                      size="sm"
+                      width="full"
+                      leftIcon={<Icon as={FaPlay} />}
+                    >
+                      Watch Now
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </Grid>
+          ) : (
+            <Box textAlign="center" py={8} bg="gray.50" borderRadius="md">
+              <Text fontSize="lg" color="gray.600">
+                No videos match your search criteria.
+              </Text>
+              <Button mt={4} colorScheme="blue" onClick={handleClearFilters}>
+                Clear Filters
+              </Button>
+            </Box>
+          )}
+        </Box>
       ) : (
         // Video Player and Analysis
         <Box maxW="900px" mx="auto">
