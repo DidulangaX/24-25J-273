@@ -83,16 +83,26 @@ const getQuestionById = async (req, res) => {
 };
 
 
-// Fetch 10 random questions for an interview session
+// Fetch 8 theory and 2 coding questions for an interview session
 const getInterviewQuestions = async (req, res) => {
   try {
-    const questions = await InterviewQuestion.aggregate([{ $sample: { size: 10 } }]);
+    // Fetch 8 theory questions
+    const theoryQuestions = await InterviewQuestion.find({ questionType: 'theory' }).limit(8);
+    
+    // Fetch 2 coding questions
+    const codingQuestions = await InterviewQuestion.find({ questionType: 'coding' }).limit(2);
+    
+    // Combine the questions
+    const questions = [...theoryQuestions, ...codingQuestions];
+
+    // Return the questions
     res.status(200).json({ questions });
   } catch (error) {
     res.status(500).json({ message: 'Internal Server Error' });
     console.error(error);
   }
 };
+
 
 // Fetch a single question by index
 const getQuestionByIndex = async (req, res) => {
