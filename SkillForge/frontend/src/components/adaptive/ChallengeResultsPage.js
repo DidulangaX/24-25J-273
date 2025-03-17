@@ -1,13 +1,13 @@
 // SkillForge\frontend\src\components\adaptive\ChallengeResultsPage.js
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 
 function ChallengeResultsPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const [sessionResult, setSessionResult] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     fetchResults();
@@ -16,14 +16,16 @@ function ChallengeResultsPage() {
   const fetchResults = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:8051/api/adaptive/challenge/${sessionId}/results`);
+      const res = await fetch(
+        `http://localhost:8051/api/adaptive/challenge/${sessionId}/results`
+      );
       if (!res.ok) {
-        throw new Error('Failed to fetch challenge results.');
+        throw new Error("Failed to fetch challenge results.");
       }
       const data = await res.json();
       setSessionResult(data);
     } catch (error) {
-      setErrorMsg(error.message || 'Error loading results.');
+      setErrorMsg(error.message || "Error loading results.");
     } finally {
       setLoading(false);
     }
@@ -56,8 +58,12 @@ function ChallengeResultsPage() {
   return (
     <div className="container mt-5">
       <h2>Challenge Results</h2>
-      <p><strong>Session ID:</strong> {sessionResult._id}</p>
-      <p><strong>Status:</strong> {sessionResult.status}</p>
+      <p>
+        <strong>Session ID:</strong> {sessionResult._id}
+      </p>
+      <p>
+        <strong>Status:</strong> {sessionResult.status}
+      </p>
       {sessionResult.result && (
         <div>
           <h4>Winner: {sessionResult.result.winner}</h4>
@@ -80,7 +86,7 @@ function ChallengeResultsPage() {
           </table>
         </div>
       )}
-      <button className="btn btn-primary" onClick={() => navigate('/')}>
+      <button className="btn btn-primary" onClick={() => navigate("/")}>
         Return Home
       </button>
     </div>

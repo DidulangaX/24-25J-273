@@ -1,13 +1,13 @@
 // AttemptSummaryPage.js
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import FinalSummaryBanner from './FinalSummaryBanner';
-import './AttemptSummaryPage.css';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import FinalSummaryBanner from "./FinalSummaryBanner";
+import "./AttemptSummaryPage.css";
 
 function AttemptSummaryPage({ userId }) {
   const { attemptNumber } = useParams();
   const [summary, setSummary] = useState(null);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -26,22 +26,22 @@ function AttemptSummaryPage({ userId }) {
       const data = await response.json();
       if (data.error) {
         setMessage(data.error);
-      } else if (data.message && data.phase !== 'finished') {
+      } else if (data.message && data.phase !== "finished") {
         // If the session isn't finished yet, display the message.
         setMessage(data.message);
       } else {
         setSummary(data);
       }
     } catch (err) {
-      console.error('Error fetching summary:', err);
-      setMessage('Error fetching summary.');
+      console.error("Error fetching summary:", err);
+      setMessage("Error fetching summary.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleBack = () => {
-    navigate('/myAttempts');
+    navigate("/myAttempts");
   };
 
   if (isLoading) {
@@ -75,21 +75,22 @@ function AttemptSummaryPage({ userId }) {
 
   // Calculate topic mastery percentage for visual representation
   const getMasteryLevel = (value) => {
-    if (value >= 0.8) return 'excellent';
-    if (value >= 0.6) return 'good';
-    if (value >= 0.4) return 'fair';
-    return 'needs-work';
+    if (value >= 0.8) return "excellent";
+    if (value >= 0.6) return "good";
+    if (value >= 0.4) return "fair";
+    return "needs-work";
   };
 
   // Get overall mastery percentage across all topics
-  const averageMastery = Object.values(summary.topic_mastery).reduce((a, b) => a + b, 0) / 
-                        Object.values(summary.topic_mastery).length;
+  const averageMastery =
+    Object.values(summary.topic_mastery).reduce((a, b) => a + b, 0) /
+    Object.values(summary.topic_mastery).length;
 
   return (
     <div className="attempt-summary-container">
       {/* Final Summary Banner */}
       <FinalSummaryBanner
-        userName={userId}  
+        userName={userId}
         attemptNumber={summary.attemptNumber}
         totalScore={summary.total_score}
         badge={summary.badge}
@@ -102,7 +103,9 @@ function AttemptSummaryPage({ userId }) {
           <span className="score-label">Total Score</span>
         </div>
         <div className="score-overview-card">
-          <span className="score-value">{(averageMastery * 100).toFixed(0)}%</span>
+          <span className="score-value">
+            {(averageMastery * 100).toFixed(0)}%
+          </span>
           <span className="score-label">Overall Mastery</span>
         </div>
         <div className="score-overview-card">
@@ -127,13 +130,17 @@ function AttemptSummaryPage({ userId }) {
               </tr>
             </thead>
             <tbody>
-              {summary.rounds.map(r => {
+              {summary.rounds.map((r) => {
                 const percentage = (r.correctCount / r.totalQuestions) * 100;
-                const performanceClass = 
-                  percentage >= 80 ? 'excellent' : 
-                  percentage >= 60 ? 'good' : 
-                  percentage >= 40 ? 'fair' : 'needs-work';
-                  
+                const performanceClass =
+                  percentage >= 80
+                    ? "excellent"
+                    : percentage >= 60
+                    ? "good"
+                    : percentage >= 40
+                    ? "fair"
+                    : "needs-work";
+
                 return (
                   <tr key={r.roundNumber} className="round-row">
                     <td className="round-number">{r.roundNumber}</td>
@@ -141,11 +148,13 @@ function AttemptSummaryPage({ userId }) {
                     <td className="total-questions">{r.totalQuestions}</td>
                     <td className="performance">
                       <div className="progress-container">
-                        <div 
+                        <div
                           className={`progress-bar ${performanceClass}`}
                           style={{ width: `${percentage}%` }}
                         ></div>
-                        <span className="progress-text">{percentage.toFixed(0)}%</span>
+                        <span className="progress-text">
+                          {percentage.toFixed(0)}%
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -165,12 +174,15 @@ function AttemptSummaryPage({ userId }) {
           {Object.entries(summary.topic_mastery).map(([topic, val]) => {
             const masteryLevel = getMasteryLevel(val);
             const percentage = (val * 100).toFixed(0);
-            
+
             return (
               <div key={topic} className={`mastery-card ${masteryLevel}`}>
                 <div className="topic-name">{topic}</div>
                 <div className="mastery-meter">
-                  <div className="mastery-fill" style={{ width: `${percentage}%` }}></div>
+                  <div
+                    className="mastery-fill"
+                    style={{ width: `${percentage}%` }}
+                  ></div>
                 </div>
                 <div className="mastery-value">{percentage}%</div>
               </div>
@@ -192,8 +204,8 @@ function AttemptSummaryPage({ userId }) {
               .slice(0, 2)
               .map(([topic, val]) => (
                 <li key={topic}>
-                  Review <strong>{topic}</strong> concepts to improve your mastery 
-                  (currently at {(val * 100).toFixed(0)}%)
+                  Review <strong>{topic}</strong> concepts to improve your
+                  mastery (currently at {(val * 100).toFixed(0)}%)
                 </li>
               ))}
             <li>Try another attempt to test your knowledge retention</li>

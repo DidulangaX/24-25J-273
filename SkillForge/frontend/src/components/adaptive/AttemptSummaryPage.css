@@ -2,7 +2,7 @@
 .attempt-summary-container {
     margin: 0 auto;
     padding: 30px 20px;
-    max-width: 1000px;
+    max-width: full;
     background: #f8f9fa;
     border-radius: 12px;
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.05);

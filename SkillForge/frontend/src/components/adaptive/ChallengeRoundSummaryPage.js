@@ -1,21 +1,21 @@
 // SkillForge/frontend/src/components/adaptive/ChallengeRoundSummaryPage.js
-import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 function ChallengeRoundSummaryPage() {
   // Get query parameters: user_id and roundNumber must be passed in the URL query string
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const userId = searchParams.get('user_id');
-  const roundNumber = searchParams.get('roundNumber');
+  const userId = searchParams.get("user_id");
+  const roundNumber = searchParams.get("roundNumber");
 
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     if (!userId || !roundNumber) {
-      setErrorMsg('Missing required parameters.');
+      setErrorMsg("Missing required parameters.");
       setLoading(false);
       return;
     }
@@ -26,21 +26,23 @@ function ChallengeRoundSummaryPage() {
   const fetchRoundSummary = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:8051/api/adaptive/round-summary?user_id=${userId}&roundNumber=${roundNumber}`);
+      const res = await fetch(
+        `http://localhost:8051/api/adaptive/round-summary?user_id=${userId}&roundNumber=${roundNumber}`
+      );
       if (!res.ok) {
-        throw new Error('Failed to fetch round summary.');
+        throw new Error("Failed to fetch round summary.");
       }
       const data = await res.json();
       setSummary(data);
     } catch (error) {
-      setErrorMsg(error.message || 'Error fetching round summary.');
+      setErrorMsg(error.message || "Error fetching round summary.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleBackToDashboard = () => {
-    navigate('/dashboard');
+    navigate("/dashboard");
   };
 
   return (
@@ -58,26 +60,42 @@ function ChallengeRoundSummaryPage() {
       {summary && (
         <div className="card shadow-sm">
           <div className="card-header bg-primary text-white">
-            <h3 className="mb-0">Round Summary - Round {summary.roundNumber}</h3>
+            <h3 className="mb-0">
+              Round Summary - Round {summary.roundNumber}
+            </h3>
           </div>
           <div className="card-body">
-            <p><strong>Total Questions:</strong> {summary.totalQuestions}</p>
-            <p><strong>Correct Answers:</strong> {summary.correctCount}</p>
-            <p><strong>Percentage Score:</strong> {summary.percentage.toFixed(2)}%</p>
+            <p>
+              <strong>Total Questions:</strong> {summary.totalQuestions}
+            </p>
+            <p>
+              <strong>Correct Answers:</strong> {summary.correctCount}
+            </p>
+            <p>
+              <strong>Percentage Score:</strong> {summary.percentage.toFixed(2)}
+              %
+            </p>
             <hr />
             <h5>Updated Mastery</h5>
             <ul className="list-group list-group-flush">
-              {Object.keys(summary.mastery).map(topic => (
+              {Object.keys(summary.mastery).map((topic) => (
                 <li key={topic} className="list-group-item">
-                  <strong>{topic}:</strong> {(summary.mastery[topic] * 100).toFixed(2)}%
+                  <strong>{topic}:</strong>{" "}
+                  {(summary.mastery[topic] * 100).toFixed(2)}%
                 </li>
               ))}
             </ul>
             <hr />
-            <h4>Awarded Badge: <span className="badge bg-success">{summary.badge}</span></h4>
+            <h4>
+              Awarded Badge:{" "}
+              <span className="badge bg-success">{summary.badge}</span>
+            </h4>
           </div>
           <div className="card-footer text-end">
-            <button className="btn btn-outline-primary" onClick={handleBackToDashboard}>
+            <button
+              className="btn btn-outline-primary"
+              onClick={handleBackToDashboard}
+            >
               Return to Dashboard
             </button>
           </div>

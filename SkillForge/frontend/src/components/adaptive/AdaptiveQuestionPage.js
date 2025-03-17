@@ -1,13 +1,13 @@
 // File: src/components/adaptive/AdaptiveQuestionPage.js
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import './AdaptiveQuestionPage.css';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import "./AdaptiveQuestionPage.css";
 
 function AdaptiveQuestionPage({ userId }) {
   const [question, setQuestion] = useState(null);
-  const [userAnswer, setUserAnswer] = useState('');
-  const [feedback, setFeedback] = useState('');
-  const [feedbackType, setFeedbackType] = useState('neutral'); // neutral, success, error
+  const [userAnswer, setUserAnswer] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const [feedbackType, setFeedbackType] = useState("neutral"); // neutral, success, error
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -34,23 +34,23 @@ function AdaptiveQuestionPage({ userId }) {
         // Could be "Session is finished." or "No active session."
         setQuestion(null);
         setFeedback(data.message);
-        setFeedbackType('neutral');
+        setFeedbackType("neutral");
       } else if (data.question_id) {
         setQuestion(data);
-        setFeedback('');
+        setFeedback("");
       }
     } catch (error) {
-      console.error('Error fetching question:', error);
-      setFeedback('Error fetching question.');
-      setFeedbackType('error');
+      console.error("Error fetching question:", error);
+      setFeedback("Error fetching question.");
+      setFeedbackType("error");
     }
     setLoading(false);
   };
 
   const handleSubmitAnswer = async () => {
     if (!question) {
-      setFeedback('No question is currently active.');
-      setFeedbackType('error');
+      setFeedback("No question is currently active.");
+      setFeedbackType("error");
       return;
     }
 
@@ -63,48 +63,54 @@ function AdaptiveQuestionPage({ userId }) {
     };
 
     try {
-      const response = await fetch('http://localhost:8051/api/adaptive/answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        "http://localhost:8051/api/adaptive/answer",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
       const data = await response.json();
 
       if (data.classification) {
         const classification = data.classification.toLowerCase();
         setFeedback(`Classification: ${data.classification}`);
         setFeedbackType(
-          classification.includes('correct') ? 'success' : 
-          classification.includes('incorrect') ? 'error' : 'neutral'
+          classification.includes("correct")
+            ? "success"
+            : classification.includes("incorrect")
+            ? "error"
+            : "neutral"
         );
       }
 
       // if there's a next question
       if (data.next_question && data.next_question.question_id) {
         setQuestion(data.next_question);
-        setUserAnswer('');
+        setUserAnswer("");
       }
       // if the server says no further questions or session finished
       else if (data.next_question && data.next_question.message) {
         setQuestion(null);
         setFeedback(data.next_question.message);
-        setFeedbackType('neutral');
+        setFeedbackType("neutral");
 
         // If the message indicates "Session is finished", auto-navigate to final summary
-        if (data.next_question.message.toLowerCase().includes('finished')) {
+        if (data.next_question.message.toLowerCase().includes("finished")) {
           // If we don't know attemptNumber, we can just go to /myAttempts
           // But if we have attemptNumber, we can direct user to final summary
           if (attemptNumber) {
             navigate(`/attemptSummary/${attemptNumber}`);
           } else {
-            navigate('/myAttempts');
+            navigate("/myAttempts");
           }
         }
       }
     } catch (error) {
-      console.error('Error submitting answer:', error);
-      setFeedback('Error submitting answer.');
-      setFeedbackType('error');
+      console.error("Error submitting answer:", error);
+      setFeedback("Error submitting answer.");
+      setFeedbackType("error");
     }
 
     setLoading(false);
@@ -116,7 +122,7 @@ function AdaptiveQuestionPage({ userId }) {
     if (attemptNumber) {
       navigate(`/attemptSummary/${attemptNumber}`);
     } else {
-      navigate('/myAttempts');
+      navigate("/myAttempts");
     }
   };
 
@@ -144,7 +150,7 @@ function AdaptiveQuestionPage({ userId }) {
         <div className="empty-state">
           <div className="empty-state-icon">📋</div>
           <p className="empty-state-message">
-            {feedback || 'No question available at the moment.'}
+            {feedback || "No question available at the moment."}
           </p>
           <button onClick={handleViewSummary} className="summary-button">
             Go to My Attempts / Summary
@@ -159,9 +165,11 @@ function AdaptiveQuestionPage({ userId }) {
     <div className="adaptive-question-container">
       <div className="question-header">
         <h1 className="question-title">Adaptive Learning</h1>
-        <p className="question-subtitle">Answer the questions to complete your assessment</p>
+        <p className="question-subtitle">
+          Answer the questions to complete your assessment
+        </p>
       </div>
-      
+
       {/* Optional Progress Bar - Uncomment if you track progress */}
       {/*
       <div className="progress-container">
@@ -174,7 +182,7 @@ function AdaptiveQuestionPage({ userId }) {
         </div>
       </div>
       */}
-      
+
       <div className="question-block">
         {/* Optional Difficulty Badge - Uncomment if you want to show difficulty */}
         {/*
@@ -194,8 +202,8 @@ function AdaptiveQuestionPage({ userId }) {
         />
       </div>
 
-      <button 
-        onClick={handleSubmitAnswer} 
+      <button
+        onClick={handleSubmitAnswer}
         className="submit-button"
         disabled={!userAnswer.trim()}
       >
@@ -203,9 +211,7 @@ function AdaptiveQuestionPage({ userId }) {
       </button>
 
       {feedback && (
-        <div className={`feedback feedback-${feedbackType}`}>
-          {feedback}
-        </div>
+        <div className={`feedback feedback-${feedbackType}`}>{feedback}</div>
       )}
     </div>
   );

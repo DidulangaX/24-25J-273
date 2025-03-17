@@ -1,17 +1,19 @@
 // File: SkillForge/frontend/src/App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import bootstrap from "../node_modules/bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
-import Cookies from 'js-cookie';
-import { Route, Routes, BrowserRouter } from 'react-router-dom';
-import Navbar from './components/navbar/navbar';
-import Home from './components/home/home';
-import Footer from './components/footer/footer';
-import Login from './components/authentication/login';
-import Register from './components/authentication/register';
-import CoursePage from './components/course/coursePage';
+import Cookies from "js-cookie";
+import { Route, Routes, BrowserRouter } from "react-router-dom";
+import Navbar from "./components/navbar/navbar";
+import Home from "./components/home/home";
+import Footer from "./components/footer/footer";
+import Login from "./components/authentication/login";
+import Register from "./components/authentication/register";
+import CoursePage from "./components/course/coursePage";
 import AddCourse from "./components/admin/addCourse";
 import { Admin, Instructor, Student } from "./enums/enums.js";
+import ChallengeIntroPage from "./components/adaptive/ChallengeIntroPage";
+
 import {
   NAVIGATE_TO_ADMIN_PROFILE,
   NAVIGATE_TO_ADD_COURSE,
@@ -26,7 +28,7 @@ import {
   NAVIGATE_TO_ADD_COURSE_CONTENTS,
   NAVIGATE_TO_SUCCESS_PAYMENT,
   NAVIGATE_TO_UPDATE_COURSE,
-  NAVIGATE_TO_HOME
+  NAVIGATE_TO_HOME,
 } from "./constant/routeConstant.js";
 import Error from "./components/404/error";
 import CryptoJS from "crypto-js";
@@ -36,31 +38,33 @@ import Payment from "./components/payment/payment";
 import AddCourseContents from "./components/admin/addCourseContents";
 import Dashboard from "./components/admin/dashboard.js";
 import PaymentSuccess from "./components/payment/paymentSuccess.js";
-import UpdateCourse from './components/admin/updateCourse.js';
-import UpdateContent from './components/admin/updateContent.js';
-import { handleLogout } from './utils/utility.js';
+import UpdateCourse from "./components/admin/updateCourse.js";
+import UpdateContent from "./components/admin/updateContent.js";
+import { handleLogout } from "./utils/utility.js";
 
 // -------------------- ADAPTIVE COMPONENTS --------------------
-import { Leaderboard } from './components/adaptive';
-import ChallengeSessionPage from './components/adaptive/ChallengeSessionPage';
-import ChallengeFriendsPage from './components/adaptive/ChallengeFriendsPage';
-import ChallengeWaitingPage from './components/adaptive/ChallengeWaitingPage';
-import ChallengeResultsPage from './components/adaptive/ChallengeResultsPage.js';
+import { Leaderboard } from "./components/adaptive";
+import ChallengeSessionPage from "./components/adaptive/ChallengeSessionPage";
+import ChallengeFriendsPage from "./components/adaptive/ChallengeFriendsPage";
+import ChallengeWaitingPage from "./components/adaptive/ChallengeWaitingPage";
+import ChallengeResultsPage from "./components/adaptive/ChallengeResultsPage.js";
 
 // >>> NEW: If you placed them in /components/adaptive:
-import MyAttemptsPage from './components/adaptive/MyAttemptsPage';
-import AttemptSummaryPage from './components/adaptive/AttemptSummaryPage';
+import MyAttemptsPage from "./components/adaptive/MyAttemptsPage";
+import AttemptSummaryPage from "./components/adaptive/AttemptSummaryPage";
 // IMPORTANT: Make sure you're using the updated multi-attempt AdaptiveQuestionPage
-import AdaptiveQuestionPage from './components/adaptive/AdaptiveQuestionPage';
+import AdaptiveQuestionPage from "./components/adaptive/AdaptiveQuestionPage";
+import AdaptiveHomePage from "./components/adaptive/AdaptiveHomePage";
+import AdaptiveTestIntroPage from "./components/adaptive/AdaptiveTestIntroPage";
 
 export default function App() {
-  const authToken = Cookies.get('authToken');
+  const authToken = Cookies.get("authToken");
   const [uData, setUData] = useState(null);
 
   useEffect(() => {
     // Check if uData exists in local storage
-    if (localStorage.getItem('uData')) {
-      const encryptedUData = localStorage.getItem('uData');
+    if (localStorage.getItem("uData")) {
+      const encryptedUData = localStorage.getItem("uData");
       const decryptedUData = CryptoJS.AES.decrypt(
         encryptedUData,
         process.env.REACT_APP_ENCRYPTION_SECRET
@@ -70,14 +74,14 @@ export default function App() {
     }
   }, []);
 
-  const isLoggedIn = authToken && authToken !== 'undefined';
+  const isLoggedIn = authToken && authToken !== "undefined";
   const isAdmin = uData?.role === Admin;
   const isInstructor = uData?.role === Instructor;
   const isStudent = uData?.role === Student;
 
   useEffect(() => {
     // Check session expired and user logout
-    if (!authToken && localStorage.getItem('uData')) {
+    if (!authToken && localStorage.getItem("uData")) {
       handleLogout();
     }
   }, [authToken]);
@@ -86,7 +90,6 @@ export default function App() {
     <BrowserRouter>
       <Navbar />
       <Routes>
-
         {/* Open Routes */}
         <Route path={NAVIGATE_TO_HOME} element={<Home />} />
         <Route
@@ -107,7 +110,9 @@ export default function App() {
         />
         <Route
           path={NAVIGATE_TO_ADMIN_PROFILE}
-          element={isLoggedIn && (isAdmin || isInstructor) ? <Dashboard /> : <Error />}
+          element={
+            isLoggedIn && (isAdmin || isInstructor) ? <Dashboard /> : <Error />
+          }
         />
         <Route
           path={NAVIGATE_TO_ADD_COURSE}
@@ -123,7 +128,13 @@ export default function App() {
         />
         <Route
           path={NAVIGATE_TO_ADD_COURSE_CONTENTS}
-          element={isLoggedIn && (isAdmin || isInstructor) ? <AddCourseContents /> : <Error />}
+          element={
+            isLoggedIn && (isAdmin || isInstructor) ? (
+              <AddCourseContents />
+            ) : (
+              <Error />
+            )
+          }
         />
         <Route
           path={NAVIGATE_TO_PROFILE}
@@ -145,27 +156,46 @@ export default function App() {
         <Route path="/leaderboard" element={<Leaderboard />} />
 
         {/* Challenge system */}
-        <Route path="/challenge/:sessionId" element={<ChallengeSessionPage />} />
+        <Route
+          path="/challenge/:sessionId"
+          element={<ChallengeSessionPage />}
+        />
         <Route path="/challenge-friends" element={<ChallengeFriendsPage />} />
-        <Route path="/challenge-waiting/:sessionId" element={<ChallengeWaitingPage />} />
-        <Route path="/challenge-results/:sessionId" element={<ChallengeResultsPage />} />
+        <Route
+          path="/challenge-waiting/:sessionId"
+          element={<ChallengeWaitingPage />}
+        />
+        <Route
+          path="/challenge-results/:sessionId"
+          element={<ChallengeResultsPage />}
+        />
 
         {/* ----------- NEW MULTI-ATTEMPT ROUTES ----------- */}
-        <Route 
-          path="/myAttempts" 
-          element={<MyAttemptsPage userId={uData?._id || uData?.username} />} 
+        <Route
+          path="/myAttempts"
+          element={<MyAttemptsPage userId={uData?._id || uData?.username} />}
         />
-        <Route 
-          path="/questions" 
-          element={<AdaptiveQuestionPage userId={uData?._id || uData?.username} />} 
+        <Route
+          path="/questions"
+          element={
+            <AdaptiveQuestionPage userId={uData?._id || uData?.username} />
+          }
         />
-        <Route 
-          path="/attemptSummary/:attemptNumber" 
-          element={<AttemptSummaryPage userId={uData?._id || uData?.username} />} 
+        <Route
+          path="/attemptSummary/:attemptNumber"
+          element={
+            <AttemptSummaryPage userId={uData?._id || uData?.username} />
+          }
         />
 
         {/* Catch-all for unknown routes -> 404 */}
         <Route path="*" element={<Error />} />
+
+        <Route path="/adaptiveHome" element={<AdaptiveHomePage />} />
+
+        <Route path="/adaptiveTestIntro" element={<AdaptiveTestIntroPage />} />
+
+        <Route path="/challengeIntro" element={<ChallengeIntroPage />} />
       </Routes>
       <Footer />
     </BrowserRouter>

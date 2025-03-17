@@ -1,44 +1,42 @@
-import React, { useEffect, useState } from 'react';
-import './Leaderboard.css';
+import React, { useEffect, useState } from "react";
+import "./Leaderboard.css";
 
 function Leaderboard() {
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:8051/api/adaptive/leaderboard')
-      .then(res => res.json())
-      .then(data => {
+    fetch("http://localhost:8051/api/adaptive/leaderboard")
+      .then((res) => res.json())
+      .then((data) => {
         setLeaders(data);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Leaderboard error:', err);
+      .catch((err) => {
+        console.error("Leaderboard error:", err);
         setLoading(false);
       });
   }, []);
 
   // Optional: define a max score for progress bar reference
   // or compute from the highest score among leaders
-  const maxScore = leaders.length > 0 
-    ? leaders[0].total_score 
-    : 100;
+  const maxScore = leaders.length > 0 ? leaders[0].total_score : 100;
 
   const getProgressWidth = (score) => {
-    if (maxScore === 0) return '0%';
+    if (maxScore === 0) return "0%";
     // compute ratio
     const ratio = (score / maxScore) * 100;
-    return ratio.toFixed(2) + '%';
+    return ratio.toFixed(2) + "%";
   };
 
   // highlight top 3 ranks
   const getRowStyle = (rank) => {
     if (rank === 1) {
-      return { backgroundColor: '#ffd70022' }; // light gold highlight
+      return { backgroundColor: "#ffd70022" }; // light gold highlight
     } else if (rank === 2) {
-      return { backgroundColor: '#c0c0c022' }; // light silver highlight
+      return { backgroundColor: "#c0c0c022" }; // light silver highlight
     } else if (rank === 3) {
-      return { backgroundColor: '#cd7f3222' }; // light bronze highlight
+      return { backgroundColor: "#cd7f3222" }; // light bronze highlight
     }
     return {};
   };
@@ -69,14 +67,18 @@ function Leaderboard() {
               const rank = idx + 1;
               const progressWidth = getProgressWidth(u.total_score);
               return (
-                <tr key={u.user_id} style={getRowStyle(rank)} className={`rank-row rank-${rank}`}>
+                <tr
+                  key={u.user_id}
+                  style={getRowStyle(rank)}
+                  className={`rank-row rank-${rank}`}
+                >
                   <td className="rank-cell">{rank}</td>
                   <td>{u.user_id}</td>
-                  <td>{u.badge || '—'}</td>
+                  <td>{u.badge || "—"}</td>
                   <td>{u.total_score}</td>
                   <td>
                     <div className="progress-bar">
-                      <div 
+                      <div
                         className="progress-fill"
                         style={{ width: progressWidth }}
                       >
