@@ -55,7 +55,55 @@ const submitAnswer = async (req, res) => {
 module.exports = { submitAnswer };
 
 
+const submitTheoryAnswer = async (req, res) => {
+  try {
+      const { code } = req.body;
 
+      if (!code || code.trim() === "") {
+          return res.status(400).json({ message: "Code answer is required" });
+      }
+
+      console.log("Received code:", code);
+
+      const scriptPath = path.join(__dirname, "../models/theoryAnswerModel.py");
+
+      const pythonProcess = spawn("python", [scriptPath, code]);
+
+      let responseData = "";
+      let errorData = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+          responseData += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (error) => {
+          errorData += error.toString();
+      });
+
+      pythonProcess.on("close", () => {
+          if (errorData) {
+              console.error("Python script error:", errorData);
+              return res.status(500).json({ message: "Error processing response from AI model.", error: errorData });
+          }
+
+          console.log("🔥 Raw AI Model Response:", responseData); // <-- Log AI model output
+
+          try {
+              const parsedData = JSON.parse(responseData);
+              res.status(200).json({ feedback: parsedData });
+          } catch (parseError) {
+              console.error("🚨 Error parsing Python script output:", parseError);
+              res.status(500).json({ message: "Error parsing AI model output.", rawOutput: responseData });
+          }
+      });
+
+  } catch (error) {
+      console.error("Error analyzing code:", error);
+      res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+module.exports = { submitTheoryAnswer };
 
 
 // Add a new question (manual entry)
@@ -122,4 +170,4 @@ const getQuestionByIndex = async (req, res) => {
   }
 };
 
-module.exports = { addQuestion, getQuestionById, getInterviewQuestions, getQuestionByIndex,submitAnswer };
+module.exports = { addQuestion, getQuestionById, getInterviewQuestions, getQuestionByIndex,submitAnswer, submitTheoryAnswer };

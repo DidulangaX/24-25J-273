@@ -10,5 +10,6 @@ router.get('/interview-questions', authMiddleware.authenticateToken, interviewCo
 router.get('/session/questions', authMiddleware.authenticateToken, interviewController.getInterviewQuestions);
 router.get('/session/:sessionId/question/:index', authMiddleware.authenticateToken, interviewController.getQuestionByIndex);
 router.post("/submit-answer", authMiddleware.authenticateToken, interviewController.submitAnswer);
+router.post("/submit-theory-answer", authMiddleware.authenticateToken, interviewController.submitTheoryAnswer);
 
 module.exports = router;

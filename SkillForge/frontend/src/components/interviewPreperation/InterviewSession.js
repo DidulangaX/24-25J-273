@@ -7,6 +7,7 @@ import Cookies from "js-cookie";
 import CryptoJS from "crypto-js";
 import { FaVolumeUp } from "react-icons/fa"; // Import speaker icon
 import CodeEditor from "./CodeEditor"; // Import CodeEditor for coding questions
+import AnswerEditor from "./AnswerEditor";
 
 export default function InterviewSession() {
   const [questions, setQuestions] = useState([]);
@@ -184,6 +185,10 @@ export default function InterviewSession() {
       {/* Code Editor for Coding Questions */}
       {questions[currentQuestionIndex]?.questionType === "coding" && (
         <CodeEditor question={animatedText} />
+      )}
+      {/* Code Editor for Coding Questions */}
+      {questions[currentQuestionIndex]?.questionType === "theory" && (
+        <AnswerEditor question={animatedText} />
       )}
 
       {/* Next Button Positioned to the Right */}
