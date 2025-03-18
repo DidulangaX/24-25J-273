@@ -12,6 +12,13 @@ import {
   AlertIcon,
   Spinner,
   Link,
+  Badge,
+  HStack,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from "@chakra-ui/react";
 import {
   ExternalLinkIcon,
@@ -49,19 +56,25 @@ const ResourceViewer = ({ resource, onBack }) => {
   const fixResourceUrl = (url) => {
     console.log("Resource URL to fix:", url);
 
-    if (!url) {
-      // Try to use filePath if url is not available
-      if (resource.filePath) {
-        const filename = resource.filePath.split(/[\/\\]/).pop();
-        console.log("Using filePath instead:", filename);
-        return `http://localhost:5000/direct-pdf/${filename}`;
+    // Handle PDFs specially
+    if (resource.type === "pdf") {
+      // Extract filename regardless of path format
+      let filename;
+      if (url) {
+        filename = url.split(/[\/\\]/).pop();
+      } else if (resource.filePath) {
+        filename = resource.filePath.split(/[\/\\]/).pop();
+      } else {
+        return "#"; // Fallback if no URL
       }
-      return "#"; // Fallback
+
+      // Return the PDF viewer URL
+      return `http://localhost:5000/pdf-viewer/${filename}`;
     }
 
-    // If it's already a direct-pdf URL
-    if (url.startsWith("/direct-pdf/")) {
-      return `http://localhost:5000${url}`;
+    // For non-PDF resources
+    if (!url) {
+      return "#"; // Fallback
     }
 
     // If it's a relative URL that starts with /uploads/ or /api/
@@ -69,17 +82,30 @@ const ResourceViewer = ({ resource, onBack }) => {
       return `http://localhost:5000${url}`;
     }
 
-    // If it's a full path with backslashes (Windows) or forward slashes (Unix)
-    if (
-      url.includes("\\") ||
-      (url.includes("/") && !url.startsWith("/") && !url.startsWith("http"))
-    ) {
-      const filename = url.split(/[\/\\]/).pop();
-      return `http://localhost:5000/direct-pdf/${filename}`;
-    }
-
     // If it's already a full URL
     return url;
+  };
+
+  // Get PDF related URLs based on filename
+  const getPdfUrls = (filename) => {
+    if (!filename) return {};
+
+    return {
+      directPdf: `http://localhost:5000/direct-pdf/${filename}`,
+      pdfViewer: `http://localhost:5000/pdf-viewer/${filename}`,
+      viewPdf: `http://localhost:5000/view-pdf/${filename}`,
+    };
+  };
+
+  // Extract filename from resource
+  const getFilename = () => {
+    if (resource.filePath) {
+      return resource.filePath.split(/[\/\\]/).pop();
+    }
+    if (resource.url) {
+      return resource.url.split(/[\/\\]/).pop();
+    }
+    return null;
   };
 
   // Determine resource type and render appropriate viewer
@@ -95,6 +121,9 @@ const ResourceViewer = ({ resource, onBack }) => {
 
     switch (resource.type) {
       case "pdf":
+        const filename = getFilename();
+        const pdfUrls = getPdfUrls(filename);
+
         return (
           <Box width="100%" textAlign="center" p={4}>
             <Heading size="md" mb={4}>
@@ -108,44 +137,163 @@ const ResourceViewer = ({ resource, onBack }) => {
               </Flex>
             )}
 
-            <Box borderWidth="1px" p={3} mb={4} bg="gray.50" borderRadius="md">
-              <Text mb={2}>
-                If the PDF doesn't display correctly below, you can:
-              </Text>
-              <Flex justify="center" gap={4} mb={4}>
-                <Button
-                  as="a"
-                  href={resourceUrl}
-                  target="_blank"
-                  colorScheme="blue"
-                  leftIcon={<ExternalLinkIcon />}
-                >
-                  Open in New Tab
-                </Button>
+            <Tabs isFitted colorScheme="blue" mb={4}>
+              <TabList>
+                <Tab>PDF.js Viewer</Tab>
+                <Tab>Direct View</Tab>
+                {resource.driveId && <Tab>Google Drive</Tab>}
+              </TabList>
 
-                <Button
-                  as="a"
-                  href={resourceUrl}
-                  download
-                  colorScheme="green"
-                  leftIcon={<DownloadIcon />}
-                >
-                  Download PDF
-                </Button>
-              </Flex>
-            </Box>
+              <TabPanels>
+                {/* PDF.js Viewer Tab */}
+                <TabPanel>
+                  <Box
+                    borderWidth="1px"
+                    p={3}
+                    mb={4}
+                    bg="gray.50"
+                    borderRadius="md"
+                  >
+                    <Text mb={2}>
+                      PDF.js viewer provides the best compatibility across
+                      browsers:
+                    </Text>
+                    <Flex justify="center" gap={4} mb={4}>
+                      <Button
+                        as="a"
+                        href={pdfUrls.pdfViewer}
+                        target="_blank"
+                        colorScheme="blue"
+                        leftIcon={<ExternalLinkIcon />}
+                      >
+                        Open in New Tab
+                      </Button>
+                      <Button
+                        as="a"
+                        href={pdfUrls.directPdf}
+                        download
+                        colorScheme="green"
+                        leftIcon={<DownloadIcon />}
+                      >
+                        Download PDF
+                      </Button>
+                    </Flex>
+                  </Box>
 
-            <Box display={loading ? "none" : "block"}>
-              <iframe
-                src={resourceUrl}
-                width="100%"
-                height="600px"
-                title={resource.title || "PDF Document"}
-                style={{ border: "1px solid #ccc", borderRadius: "4px" }}
-                onLoad={() => setLoading(false)}
-                onError={handleResourceError}
-              />
-            </Box>
+                  <Box display={loading ? "none" : "block"}>
+                    <iframe
+                      src={pdfUrls.pdfViewer}
+                      width="100%"
+                      height="600px"
+                      title={resource.title || "PDF Document"}
+                      style={{ border: "1px solid #ccc", borderRadius: "4px" }}
+                      onLoad={() => setLoading(false)}
+                      onError={handleResourceError}
+                    />
+                  </Box>
+                </TabPanel>
+
+                {/* Direct View Tab */}
+                <TabPanel>
+                  <Box
+                    borderWidth="1px"
+                    p={3}
+                    mb={4}
+                    bg="gray.50"
+                    borderRadius="md"
+                  >
+                    <Text mb={2}>
+                      Direct PDF view using browser's built-in viewer:
+                    </Text>
+                    <Flex justify="center" gap={4} mb={4}>
+                      <Button
+                        as="a"
+                        href={pdfUrls.viewPdf}
+                        target="_blank"
+                        colorScheme="blue"
+                        leftIcon={<ExternalLinkIcon />}
+                      >
+                        Open in New Tab
+                      </Button>
+                      <Button
+                        as="a"
+                        href={pdfUrls.directPdf}
+                        download
+                        colorScheme="green"
+                        leftIcon={<DownloadIcon />}
+                      >
+                        Download PDF
+                      </Button>
+                    </Flex>
+                  </Box>
+
+                  <Box display={loading ? "none" : "block"}>
+                    <iframe
+                      src={pdfUrls.viewPdf}
+                      width="100%"
+                      height="600px"
+                      title={resource.title || "PDF Document"}
+                      style={{ border: "1px solid #ccc", borderRadius: "4px" }}
+                      onLoad={() => setLoading(false)}
+                      onError={handleResourceError}
+                    />
+                  </Box>
+                </TabPanel>
+
+                {/* Google Drive Tab (only if driveId exists) */}
+                {resource.driveId && (
+                  <TabPanel>
+                    <Box
+                      borderWidth="1px"
+                      p={3}
+                      mb={4}
+                      bg="gray.50"
+                      borderRadius="md"
+                    >
+                      <Text mb={2}>
+                        View from Google Drive (most reliable):
+                      </Text>
+                      <Flex justify="center" gap={4} mb={4}>
+                        <Button
+                          as="a"
+                          href={`https://drive.google.com/file/d/${resource.driveId}/view`}
+                          target="_blank"
+                          colorScheme="blue"
+                          leftIcon={<ExternalLinkIcon />}
+                        >
+                          Open in Drive
+                        </Button>
+                        <Button
+                          as="a"
+                          href={`https://drive.google.com/uc?export=download&id=${resource.driveId}`}
+                          download
+                          colorScheme="green"
+                          leftIcon={<DownloadIcon />}
+                        >
+                          Download from Drive
+                        </Button>
+                      </Flex>
+                    </Box>
+
+                    <Box display={loading ? "none" : "block"}>
+                      <iframe
+                        src={`https://drive.google.com/file/d/${resource.driveId}/preview`}
+                        width="100%"
+                        height="600px"
+                        title={resource.title || "PDF Document"}
+                        style={{
+                          border: "1px solid #ccc",
+                          borderRadius: "4px",
+                        }}
+                        onLoad={() => setLoading(false)}
+                        onError={handleResourceError}
+                        allowFullScreen
+                      />
+                    </Box>
+                  </TabPanel>
+                )}
+              </TabPanels>
+            </Tabs>
           </Box>
         );
 
@@ -201,15 +349,27 @@ const ResourceViewer = ({ resource, onBack }) => {
         <Button leftIcon={<ArrowBackIcon />} onClick={onBack} variant="outline">
           Back to Recommendations
         </Button>
-
         {resource && (
-          <Text fontWeight="semibold" color="gray.600">
-            {resource.type === "pdf"
-              ? "PDF Document"
-              : resource.type === "link"
-              ? "External Link"
-              : "Text Content"}
-          </Text>
+          <HStack>
+            <Badge
+              colorScheme={
+                resource.type === "pdf"
+                  ? "red"
+                  : resource.type === "link"
+                  ? "blue"
+                  : "green"
+              }
+            >
+              {resource.type === "pdf"
+                ? "PDF Document"
+                : resource.type === "link"
+                ? "External Link"
+                : "Text Content"}
+            </Badge>
+            {resource.driveId && (
+              <Badge colorScheme="purple">Google Drive</Badge>
+            )}
+          </HStack>
         )}
       </Flex>
 

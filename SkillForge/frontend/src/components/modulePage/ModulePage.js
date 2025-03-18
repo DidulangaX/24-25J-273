@@ -10,7 +10,6 @@ import ResourceViewer from "./ResourceViewer/ResourceViewer";
 import InteractionGuidance from "./InteractionGuidance/InteractionGuidance";
 import PersonalizedRecommendationsPanel from "./RecommendationsPanel/PersonalizedRecommendationsPanel";
 
-
 import {
   Box,
   Button,
@@ -27,28 +26,15 @@ import {
   useColorModeValue,
   Stack,
   useToast,
-  Wrap,
-  WrapItem,
   Divider,
-  Tooltip,
   Icon,
-  Collapse,
   Input,
   InputGroup,
   InputLeftElement,
   Select,
-  HStack,
-  VStack,
 } from "@chakra-ui/react";
-import {
-  InfoIcon,
-  WarningIcon,
-  ExternalLinkIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  SearchIcon,
-} from "@chakra-ui/icons";
-import { FaPlay, FaLightbulb, FaFilter } from "react-icons/fa";
+import { InfoIcon, ChevronLeftIcon, SearchIcon } from "@chakra-ui/icons";
+import { FaPlay, FaFilter } from "react-icons/fa";
 
 const ModulePage = ({ userId = "user123" }) => {
   const { videoId } = useParams();

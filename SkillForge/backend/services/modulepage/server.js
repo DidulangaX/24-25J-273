@@ -56,29 +56,119 @@ app.use((req, res, next) => {
   next();
 });
 
-// Special route for serving PDFs - Adding this before regular routes
+// Enhanced PDF viewing routes - these come before other routes
+// 1. Direct PDF viewing route with proper headers
 app.get("/direct-pdf/:filename", (req, res) => {
   const { filename } = req.params;
+
   // First try uploads/pdfs directory
   let pdfPath = path.join(__dirname, "uploads/pdfs", filename);
+
+  // If not found there, try the general uploads directory
   if (!fs.existsSync(pdfPath)) {
-    // Then try just uploads directory
     pdfPath = path.join(__dirname, "uploads", filename);
   }
-  if (!fs.existsSync(pdfPath)) {
-    // Finally try at the root level
-    pdfPath = path.join(__dirname, filename);
-  }
+
   console.log(`Looking for PDF at: ${pdfPath}`);
+
   if (fs.existsSync(pdfPath)) {
-    console.log("PDF found, sending file");
-    // Set correct content type header
+    console.log("PDF found, sending file with inline disposition");
+
+    // These headers are critical to display in browser instead of downloading
     res.setHeader("Content-Type", "application/pdf");
-    // Set filename for download
     res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+
     // Send the file
     return res.sendFile(pdfPath);
   }
+
+  console.log("PDF not found");
+  res.status(404).send("PDF not found");
+});
+
+// 2. PDF.js viewer route for better browser compatibility
+app.get("/pdf-viewer/:filename", (req, res) => {
+  const { filename } = req.params;
+  const pdfUrl = `/direct-pdf/${filename}`;
+  const host = req.get("host");
+  const protocol = req.protocol;
+  const fullPdfUrl = `${protocol}://${host}${pdfUrl}`;
+
+  // Send a simple HTML page with PDF.js viewer
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>PDF Viewer</title>
+      <style>
+        body, html { 
+          margin: 0; 
+          padding: 0; 
+          height: 100%; 
+          overflow: hidden; 
+        }
+        #pdf-viewer {
+          width: 100%;
+          height: 100vh;
+          border: none;
+        }
+      </style>
+    </head>
+    <body>
+      <iframe 
+        id="pdf-viewer" 
+        src="https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(
+          fullPdfUrl
+        )}"
+        title="PDF Viewer">
+      </iframe>
+    </body>
+    </html>
+  `);
+});
+
+// 3. View PDF route with additional logging for debugging
+app.get("/view-pdf/:filename", (req, res) => {
+  const { filename } = req.params;
+
+  // First try uploads/pdfs directory
+  let pdfPath = path.join(__dirname, "uploads/pdfs", filename);
+
+  // If not found there, try the general uploads directory
+  if (!fs.existsSync(pdfPath)) {
+    pdfPath = path.join(__dirname, "uploads", filename);
+  }
+
+  // If still not found, check one level up (possible server configuration)
+  if (!fs.existsSync(pdfPath)) {
+    pdfPath = path.join(__dirname, "..", "uploads/pdfs", filename);
+  }
+
+  console.log(`Looking for PDF at: ${pdfPath}`);
+
+  if (fs.existsSync(pdfPath)) {
+    console.log("PDF found, sending file with inline disposition");
+
+    // Try to get file stats for debugging
+    try {
+      const stats = fs.statSync(pdfPath);
+      console.log(`File size: ${stats.size} bytes`);
+      console.log(`File permissions: ${stats.mode.toString(8)}`);
+    } catch (err) {
+      console.error("Error getting file stats:", err);
+    }
+
+    // These headers are critical to display in browser instead of downloading
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    res.setHeader("Accept-Ranges", "bytes");
+
+    // Send the file
+    return res.sendFile(pdfPath);
+  }
+
   console.log("PDF not found");
   res.status(404).send("PDF not found");
 });
@@ -145,6 +235,8 @@ app.get("/list-pdfs", (req, res) => {
         path: fullPath,
         url: `/uploads/pdfs/${file}`,
         directUrl: `/direct-pdf/${file}`,
+        pdfViewerUrl: `/pdf-viewer/${file}`,
+        viewPdfUrl: `/view-pdf/${file}`,
         size: stats.size,
         created: stats.birthtime,
       };
@@ -240,7 +332,10 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(
-    `- Access a PDF at: http://localhost:${PORT}/direct-pdf/pdf-1742027762887.pdf`
+    `- View PDF files at: http://localhost:${PORT}/view-pdf/FILENAME.pdf`
+  );
+  console.log(
+    `- Access PDF.js viewer at: http://localhost:${PORT}/pdf-viewer/FILENAME.pdf`
   );
   console.log(`- View all PDFs at: http://localhost:${PORT}/list-pdfs`);
 });
