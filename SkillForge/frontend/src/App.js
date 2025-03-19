@@ -1,35 +1,18 @@
-// File: SkillForge/frontend/src/App.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import bootstrap from "../node_modules/bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
-import Cookies from "js-cookie";
-import { Route, Routes, BrowserRouter } from "react-router-dom";
-import Navbar from "./components/navbar/navbar";
-import Home from "./components/home/home";
-import Footer from "./components/footer/footer";
-import Login from "./components/authentication/login";
-import Register from "./components/authentication/register";
-import CoursePage from "./components/course/coursePage";
+import Cookies from 'js-cookie';
+import { Route, Routes, BrowserRouter } from 'react-router-dom';
+import Navbar from './components/navbar/navbar';
+import Home from './components/home/home';
+import Footer from './components/footer/footer';
+import Login from './components/authentication/login';
+import Register from './components/authentication/register';
+import CoursePage from './components/course/coursePage';
 import AddCourse from "./components/admin/addCourse";
 import { Admin, Instructor, Student } from "./enums/enums.js";
+import { NAVIGATE_TO_ADMIN_PROFILE, NAVIGATE_TO_ADD_COURSE, NAVIGATE_TO_UPDATE_CONTENT, NAVIGATE_TO_COURSE, NAVIGATE_TO_COURSE_PAGE, NAVIGATE_TO_INVALID_ROUTES, NAVIGATE_TO_LOGIN, NAVIGATE_TO_PAYMENTS, NAVIGATE_TO_PROFILE, NAVIGATE_TO_REGISTER, NAVIGATE_TO_ADD_COURSE_CONTENTS, NAVIGATE_TO_SUCCESS_PAYMENT, NAVIGATE_TO_UPDATE_COURSE, NAVIGATE_TO_HOME, NAVIGATE_TO_COMMUNITY_SUPPORT } from "./constant/routeConstant.js";
 import ChallengeIntroPage from "./components/adaptive/ChallengeIntroPage";
-
-import {
-  NAVIGATE_TO_ADMIN_PROFILE,
-  NAVIGATE_TO_ADD_COURSE,
-  NAVIGATE_TO_UPDATE_CONTENT,
-  NAVIGATE_TO_COURSE,
-  NAVIGATE_TO_COURSE_PAGE,
-  NAVIGATE_TO_INVALID_ROUTES,
-  NAVIGATE_TO_LOGIN,
-  NAVIGATE_TO_PAYMENTS,
-  NAVIGATE_TO_PROFILE,
-  NAVIGATE_TO_REGISTER,
-  NAVIGATE_TO_ADD_COURSE_CONTENTS,
-  NAVIGATE_TO_SUCCESS_PAYMENT,
-  NAVIGATE_TO_UPDATE_COURSE,
-  NAVIGATE_TO_HOME,
-} from "./constant/routeConstant.js";
 import Error from "./components/404/error";
 import CryptoJS from "crypto-js";
 import Course from "./components/course/course";
@@ -56,6 +39,11 @@ import AttemptSummaryPage from "./components/adaptive/AttemptSummaryPage";
 import AdaptiveQuestionPage from "./components/adaptive/AdaptiveQuestionPage";
 import AdaptiveHomePage from "./components/adaptive/AdaptiveHomePage";
 import AdaptiveTestIntroPage from "./components/adaptive/AdaptiveTestIntroPage";
+
+import CommunitySupportPage from './components/communitysupport/CommunitySupportPage';
+import QuestionDetailPage from './components/communitysupport/QuestionDetailPage';
+import InterviewPractice from "./components/interviewPreperation/InterviewPractice";
+import InterviewSession from "./components/interviewPreperation/InterviewSession";
 
 export default function App() {
   const authToken = Cookies.get("authToken");
@@ -102,7 +90,11 @@ export default function App() {
         />
         <Route path={NAVIGATE_TO_COURSE_PAGE} element={<CoursePage />} />
         <Route path={NAVIGATE_TO_INVALID_ROUTES} element={<Error />} />
+<Route path={NAVIGATE_TO_COMMUNITY_SUPPORT} element={<CommunitySupportPage />} />
 
+        <Route path="/interview" element={<InterviewPractice />} />
+        <Route path="/start-interview" element={<InterviewSession />} />
+	<Route path="/community/questions/:questionId" element={<QuestionDetailPage />} />
         {/* Authorized Routes */}
         <Route
           path={NAVIGATE_TO_COURSE}
