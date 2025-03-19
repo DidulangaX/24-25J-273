@@ -1,8 +1,13 @@
+//SkillForge\backend\services\authenticate\server.js
+
 const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 require('dotenv').config(); // Load environment variables from .env file
+const { authenticateToken } = require('./authMiddleware');
+const updateLastActive = require('./updateLastActive'); // the new file
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,6 +38,11 @@ db.once('open', () => {
 // Routes
 const authRoutes = require('./routes/authRoutes');
 app.use('/api/auth', authRoutes);
+// Enforce token & update lastActive for any route that needs user context
+app.use(authenticateToken, updateLastActive);
+// Then define or use your routes
+app.use('/api/auth', authRoutes);
+
 
 // Start server
 app.listen(PORT, () => {

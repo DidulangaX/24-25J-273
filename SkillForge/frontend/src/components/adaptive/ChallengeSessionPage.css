@@ -1,0 +1,181 @@
+/* SkillForge\frontend\src\components\adaptive\ChallengeSessionPage.css */
+.challenge-session-page {
+    padding: 50px 100px;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+  }
+  
+  .session-header {
+    margin-bottom: 30px;
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #6e8efb, #a777e3);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .timer {
+    font-weight: bold;
+    font-size: 1.2rem;
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 10px;
+  }
+  
+  .timer.warning {
+    color: #ffc107;
+    animation: pulse 1s infinite;
+  }
+  
+  .timer.danger {
+    color: #ff4136;
+    animation: pulse 0.7s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+  
+  .question-card {
+    opacity: 0;
+    transform: translateX(100%);
+    transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), 
+                opacity 0.6s ease-in-out;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    animation: slide-in 0.6s forwards cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  }
+  
+  @keyframes slide-in {
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  .question-card.slide-out {
+    transform: translateX(-100%);
+    opacity: 0;
+    transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55), 
+                opacity 0.6s ease-in-out;
+  }
+  
+  .card-header {
+    background: linear-gradient(90deg, #74ebd5, #acb6e5);
+    color: #2c3e50;
+    font-weight: 600;
+    padding: 15px 20px;
+    border: none;
+  }
+  
+  .card-body {
+    padding: 25px;
+    background-color: white;
+  }
+  
+  .form-control {
+    border: 2px solid #e9ecef;
+    padding: 15px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    resize: none;
+    font-size: 16px;
+  }
+  
+  .form-control:focus {
+    border-color: #acb6e5;
+    box-shadow: 0 0 0 0.2rem rgba(172, 182, 229, 0.25);
+  }
+  
+  .btn-primary {
+    background: linear-gradient(90deg, #6e8efb, #a777e3);
+    border: none;
+    padding: 10px 25px;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    margin-top: 15px;
+  }
+  
+  .btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(90deg, #a777e3, #6e8efb);
+  }
+  
+  .btn-primary:active {
+    transform: translateY(1px);
+  }
+  
+  .btn-success {
+    background: linear-gradient(90deg, #56ab2f, #a8e063);
+    border: none;
+    padding: 15px 35px;
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    font-weight: 600;
+    margin-top: 20px;
+    font-size: 18px;
+  }
+  
+  .btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 7px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .progress-indicators {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  
+  .progress-dot {
+    height: 12px;
+    width: 12px;
+    background-color: #e9ecef;
+    border-radius: 50%;
+    margin: 0 5px;
+    transition: all 0.3s ease;
+  }
+  
+  .progress-dot.active {
+    background-color: #a777e3;
+    transform: scale(1.2);
+  }
+  
+  .complete-message {
+    text-align: center;
+    padding: 40px;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    animation: fade-in 1s ease;
+  }
+  
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #f44336;
+    border-radius: 50%;
+    animation: confetti-fall 5s ease-in-out infinite;
+  }
+  
+  @keyframes confetti-fall {
+    0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
