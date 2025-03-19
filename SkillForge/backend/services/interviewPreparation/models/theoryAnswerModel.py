@@ -1,5 +1,4 @@
 # theoryAnswerModel.py
-
 import joblib
 import os
 import json

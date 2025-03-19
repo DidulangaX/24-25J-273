@@ -13,36 +13,36 @@ mongoose.connect(process.env.MONGO, {
 .then(() => console.log("MongoDB connected for seeding code questions..."))
 .catch((err) => console.error("MongoDB connection error:", err));
 
-// Define your coding questions
+// Define your theory questions
 const codeQuestions = [
   {
-    question: "Write a function to reverse a string.",
-    category: "Coding",
-    questionType: "coding",
+    question: "What is the purpose of the 'this' keyword in Java?",
+    category: "theory",
+    questionType: "theory",
     difficulty: "Easy"
   },
   {
-    question: "Write a function to check if a string is a palindrome.",
-    category: "Coding",
-    questionType: "coding",
+    question: "What is a deadlock in multithreading?",
+    category: "theory",
+    questionType: "theory",
     difficulty: "Medium"
   },
   {
-    question: "Implement a function to find the factorial of a number using recursion.",
-    category: "Coding",
-    questionType: "coding",
+    question: "What is a foreign key in a database?",
+    category: "theory",
+    questionType: "theory",
     difficulty: "Medium"
   },
   {
-    question: "Write a function to sort an array of numbers.",
-    category: "Coding",
-    questionType: "coding",
+    question: "What is the difference between an abstract class and an interface?",
+    category: "theory",
+    questionType: "theory",
     difficulty: "Easy"
   },
   {
-    question: "Implement a function to determine if a given number is prime.",
-    category: "Coding",
-    questionType: "coding",
+    question: "What is a constructor in object-oriented programming?",
+    category: "theory",
+    questionType: "theory",
     difficulty: "Medium"
   }
 ];

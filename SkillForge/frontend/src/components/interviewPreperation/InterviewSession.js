@@ -95,7 +95,7 @@ export default function InterviewSession() {
       centerContent
       maxW="1000px"
       h="600px"
-      mt={12} // Move interview container down
+      mt={20} // Move interview container down
       py={6}
       display="flex"
       flexDirection="column"

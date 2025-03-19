@@ -117,7 +117,7 @@ export default function AnswerEditor({ question }) {
           {feedback.map((err, idx) => (
             <Text
               key={idx}
-              color={err.error_type === "No Errors Detected" ? "green.600" : "red.600"}
+              color={err.error_type === "No Errors Detected" ? "green.600" : "green.600"}
             >
               {err.error_type}: {err.explanation}
             </Text>

@@ -53,7 +53,7 @@ export default function CodeEditor({ question }) {
 
       {/* Error Message Display */}
       {error && (
-        <Box p={4} bg="red.100" borderRadius="md" width="100%">
+        <Box p={4} bg="blue.100" borderRadius="md" width="100%">
           <Text fontSize="lg" fontWeight="bold" color="red.600">
             {error}
           </Text>
