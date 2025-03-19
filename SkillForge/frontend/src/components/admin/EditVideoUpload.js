@@ -1,4 +1,3 @@
-// src/components/admin/EditVideoUpload.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -53,7 +52,8 @@ const EditVideoUpload = () => {
   const queryParams = new URLSearchParams(location.search);
   const editId = videoId || queryParams.get("edit");
 
-  // State for video data
+  const API_BASE_URL = "http://localhost:5000/api";
+
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -66,7 +66,6 @@ const EditVideoUpload = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [originalFileName, setOriginalFileName] = useState("");
 
-  // New state variables for enhanced learning path
   const [sequenceId, setSequenceId] = useState("");
   const [sequencePosition, setSequencePosition] = useState(1);
   const [level, setLevel] = useState(3); // Numeric difficulty level (1-5)
@@ -76,12 +75,12 @@ const EditVideoUpload = () => {
   const [prerequisites, setPrerequisites] = useState([]);
   const [selectedPrereqs, setSelectedPrereqs] = useState([]);
 
+  const [debugInfo, setDebugInfo] = useState({});
+
   useEffect(() => {
-    // Fetch existing videos for prerequisites selection
     const fetchVideos = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/videos");
-        // Filter out the current video being edited
+        const response = await axios.get(`${API_BASE_URL}/videos`);
         const filteredVideos =
           response.data.filter((video) => video._id !== editId) || [];
         setExistingVideos(filteredVideos);
@@ -99,8 +98,8 @@ const EditVideoUpload = () => {
 
     fetchVideos();
 
-    // If editing an existing video, fetch its data
     if (editId) {
+      console.log("Editing video with ID:", editId);
       fetchVideoData();
     } else {
       setIsLoading(false);
@@ -110,12 +109,12 @@ const EditVideoUpload = () => {
   const fetchVideoData = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/videos/${editId}`
-      );
+      const videoEndpoint = `${API_BASE_URL}/videos/${editId}`;
+      console.log("Fetching video data from:", videoEndpoint);
+
+      const response = await axios.get(videoEndpoint);
       const videoData = response.data;
 
-      // Set form fields with video data
       setTitle(videoData.title || "");
       setDescription(videoData.description || "");
       setCategory(videoData.category || "");
@@ -124,27 +123,23 @@ const EditVideoUpload = () => {
       setSequencePosition(videoData.sequencePosition || 1);
       setLevel(videoData.level || 3);
 
-      // Set original filename
       if (videoData.filePath) {
         const filename = videoData.filePath.split("/").pop();
         setOriginalFileName(filename);
       }
 
-      // Set tags
       if (videoData.tags && videoData.tags.length > 0) {
         setTagArray(videoData.tags);
       }
 
-      // Set prerequisites
       if (videoData.prerequisites && videoData.prerequisites.length > 0) {
         setPrerequisites(videoData.prerequisites);
 
-        // Fetch prerequisite video details
         const prereqsDetails = [];
         for (const prereqId of videoData.prerequisites) {
           try {
             const prereqResponse = await axios.get(
-              `http://localhost:5000/api/videos/${prereqId}`
+              `${API_BASE_URL}/videos/${prereqId}`
             );
             prereqsDetails.push({
               id: prereqId,
@@ -158,9 +153,25 @@ const EditVideoUpload = () => {
         setSelectedPrereqs(prereqsDetails);
       }
 
+      setDebugInfo({
+        videoId: videoData._id,
+        title: videoData.title,
+        endpoint: videoEndpoint,
+      });
+
       setIsLoading(false);
     } catch (error) {
       console.error("Error fetching video data:", error);
+
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+      } else if (error.request) {
+        console.error("No response received, request details:", error.request);
+      } else {
+        console.error("Error setting up request:", error.message);
+      }
+
       toast({
         title: "Error",
         description: "Failed to fetch video data",
@@ -228,7 +239,6 @@ const EditVideoUpload = () => {
     try {
       const formData = new FormData();
 
-      // Add basic video info
       if (file) {
         formData.append("video", file);
       }
@@ -238,17 +248,18 @@ const EditVideoUpload = () => {
       formData.append("difficultyLevel", difficultyLevel);
       formData.append("isRecommendation", "false");
 
-      // Add learning path info
       formData.append("sequenceId", sequenceId);
       formData.append("sequencePosition", sequencePosition);
       formData.append("level", level);
       formData.append("tags", tagArray.join(","));
       formData.append("prerequisites", JSON.stringify(prerequisites));
 
+      console.log("Submitting form with ID:", editId);
+      console.log("Form data keys:", [...formData.keys()]);
+
       let response;
 
       if (editId) {
-        // Update existing video
         response = await axios.put(
           `http://localhost:5000/api/videos/${editId}`,
           formData,
@@ -301,12 +312,25 @@ const EditVideoUpload = () => {
         isClosable: true,
       });
 
-      // Navigate back to dashboard after short delay
       setTimeout(() => {
         navigate("/module-dashboard");
       }, 2000);
     } catch (err) {
       console.error(editId ? "Update failed:" : "Upload failed:", err);
+
+      if (err.response) {
+        console.error("Error response data:", err.response.data);
+        console.error("Error response status:", err.response.status);
+        console.error("Error response headers:", err.response.headers);
+      } else if (err.request) {
+        console.error(
+          "Request was made but no response was received:",
+          err.request
+        );
+      } else {
+        console.error("Error message:", err.message);
+      }
+
       setMessage("Error: " + (err.response?.data?.message || err.message));
 
       toast({
@@ -359,6 +383,16 @@ const EditVideoUpload = () => {
         />
         <Heading>{editId ? "Edit Video" : "Upload Learning Video"}</Heading>
       </Flex>
+
+      {/* Debug information - can be removed in production */}
+      {editId && Object.keys(debugInfo).length > 0 && (
+        <Alert status="info" mb={4}>
+          <AlertIcon />
+          <Text fontSize="sm">
+            Editing video: {debugInfo.title} (ID: {debugInfo.videoId})
+          </Text>
+        </Alert>
+      )}
 
       {message && (
         <Alert

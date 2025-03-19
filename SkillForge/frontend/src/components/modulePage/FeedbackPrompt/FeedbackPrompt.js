@@ -1,4 +1,3 @@
-// src/components/modulePage/FeedbackPrompt/FeedbackPrompt.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -36,9 +35,6 @@ import {
 } from "@chakra-ui/icons";
 import axios from "axios";
 
-/**
- * Enhanced FeedbackPrompt component with professional design
- */
 const FeedbackPrompt = ({
   videoId,
   userId,
@@ -55,15 +51,13 @@ const FeedbackPrompt = ({
   const [submissionResult, setSubmissionResult] = useState(null);
   const toast = useToast();
 
-  // Check if we should automatically prompt the user based on interaction data
   useEffect(() => {
     if (!interactionData) return;
 
-    // Show prompt after significant interaction (e.g., watching 70% of video or showing signs of difficulty)
     const shouldPrompt =
-      (interactionData.session_duration > 120 && !isOpen) || // After 2 minutes
+      (interactionData.session_duration > 120 && !isOpen) ||
       (interactionData.total_pauses > 5 &&
-        interactionData.replay_frequency > 2); // Signs of difficulty
+        interactionData.replay_frequency > 2);
 
     if (shouldPrompt && !showPrompt) {
       setShowPrompt(true);
@@ -89,7 +83,6 @@ const FeedbackPrompt = ({
         `Submitting feedback for video ${videoId}: ${difficultyRating}`
       );
 
-      // Use the endpoint for personalized recommendations
       const response = await axios.post(
         "http://localhost:5000/api/recommendations/feedback",
         {
@@ -97,18 +90,16 @@ const FeedbackPrompt = ({
           userId,
           perceivedDifficulty: difficultyRating,
           comments: specificFeedback,
-          interactionData, // Pass the interaction data for better personalization
+          interactionData,
         }
       );
 
       console.log("Feedback response:", response.data);
 
       if (response.data && response.data.success) {
-        // Store submission result for showing in UI
         setSubmissionResult(response.data);
         setSubmitted(true);
 
-        // Show success toast
         toast({
           title: "Feedback Submitted",
           description:
@@ -119,7 +110,6 @@ const FeedbackPrompt = ({
           position: "top",
         });
 
-        // Pass data to parent component
         if (onFeedbackSubmit && typeof onFeedbackSubmit === "function") {
           onFeedbackSubmit(difficultyRating, response.data);
         }
@@ -143,7 +133,6 @@ const FeedbackPrompt = ({
 
   const handleClose = () => {
     if (submitted) {
-      // Reset form and prompt state on close
       setDifficultyRating("");
       setSpecificFeedback("");
       setShowPrompt(false);
@@ -153,7 +142,6 @@ const FeedbackPrompt = ({
     onClose();
   };
 
-  // Function to get the appropriate background and border colors based on difficulty
   const getDifficultyColors = (difficulty) => {
     switch (difficulty) {
       case "easy":

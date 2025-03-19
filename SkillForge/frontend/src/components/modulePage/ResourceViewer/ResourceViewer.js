@@ -1,4 +1,3 @@
-// src/components/modulePage/ResourceViewer/ResourceViewer.js
 import React, { useState, useEffect } from "react";
 import {
   Box,

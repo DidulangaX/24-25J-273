@@ -1,5 +1,3 @@
-// utils/difficultyDetection.js
-
 const calculateDifficulty = (interactions, videoDuration) => {
   const pauseCount = interactions.filter(
     (i) => i.interactionType === "pause"
@@ -19,9 +17,9 @@ const calculateDifficulty = (interactions, videoDuration) => {
     return total + (nextPause - curr.timestamp);
   }, 0);
 
-  const pauseFrequency = pauseCount / (videoDuration / 60); // pauses per minute
-  const seekBackFrequency = seekBackCount / (videoDuration / 60); // seek backs per minute
-  const seekForwardFrequency = seekForwardCount / (videoDuration / 60); // seek forwards per minute
+  const pauseFrequency = pauseCount / (videoDuration / 60);
+  const seekBackFrequency = seekBackCount / (videoDuration / 60);
+  const seekForwardFrequency = seekForwardCount / (videoDuration / 60);
   const watchTimeRatio = totalWatchTime / videoDuration;
   const replayCount = interactions.filter(
     (i) =>
@@ -31,21 +29,18 @@ const calculateDifficulty = (interactions, videoDuration) => {
   ).length;
 
   let difficultyScore = 0;
-  difficultyScore += pauseFrequency * 3; // Each pause adds 3 points
-  difficultyScore += seekBackFrequency * 4; // Each seek back adds 4 points
-  difficultyScore += seekForwardFrequency * 1; // Each seek forward adds 1 point (skipping might indicate easiness)
-  difficultyScore += (1 - watchTimeRatio) * 15; // Less watch time ratio adds up to 15 points
-  difficultyScore += replayCount * 5; // Each significant rewind (>10 seconds) adds 5 points
+  difficultyScore += pauseFrequency * 3;
+  difficultyScore += seekBackFrequency * 4;
+  difficultyScore += seekForwardFrequency * 1;
+  difficultyScore += (1 - watchTimeRatio) * 15;
+  difficultyScore += replayCount * 5;
 
-  // Adjust score based on video duration
-  difficultyScore = difficultyScore * (1 + videoDuration / 600); // Longer videos are potentially more difficult
+  difficultyScore = difficultyScore * (1 + videoDuration / 600);
 
-  // Calculate engagement score
   const engagementScore =
     (pauseFrequency + seekBackFrequency + seekForwardFrequency) *
     watchTimeRatio;
 
-  // Adjust difficulty based on engagement
   difficultyScore = difficultyScore * (1 + engagementScore / 10);
 
   if (difficultyScore < 10) return "Low";

@@ -3,7 +3,6 @@ const UserInteraction = require("../models/UserInteraction");
 const { spawn } = require("child_process");
 const path = require("path");
 
-// Record user interaction with video
 const recordInteraction = asyncHandler(async (req, res) => {
   const {
     userId,
@@ -15,11 +14,9 @@ const recordInteraction = asyncHandler(async (req, res) => {
     skippedContent,
   } = req.body;
 
-  // Check if there's an existing interaction record
   let interaction = await UserInteraction.findOne({ userId, videoId });
 
   if (interaction) {
-    // Update existing record
     interaction.pauseCount = pauseCount;
     interaction.skipCount = skipCount;
     interaction.replayCount = replayCount;
@@ -29,7 +26,6 @@ const recordInteraction = asyncHandler(async (req, res) => {
 
     await interaction.save();
   } else {
-    // Create new record
     interaction = await UserInteraction.create({
       userId,
       videoId,
@@ -74,7 +70,6 @@ const recordInteraction = asyncHandler(async (req, res) => {
     if (code === 0 && prediction) {
       const isDifficult = parseInt(prediction.trim()) === 1;
 
-      // Update the prediction in the database
       interaction.difficultyPrediction = isDifficult;
       await interaction.save();
 
@@ -93,7 +88,6 @@ const recordInteraction = asyncHandler(async (req, res) => {
   });
 });
 
-// Record user feedback on content difficulty
 const recordUserFeedback = asyncHandler(async (req, res) => {
   const { userId, videoId, userFeedback } = req.body;
 

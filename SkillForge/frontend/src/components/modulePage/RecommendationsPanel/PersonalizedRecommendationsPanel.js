@@ -1,4 +1,3 @@
-// src/components/modulePage/RecommendationsPanel/PersonalizedRecommendationsPanel.js
 import React, { useState } from "react";
 import {
   Box,
@@ -69,9 +68,6 @@ import {
   FaLock,
 } from "react-icons/fa";
 
-/**
- * Enhanced professional recommendations panel for personalized learning
- */
 const PersonalizedRecommendationsPanel = ({
   recommendations,
   loading,
@@ -82,27 +78,22 @@ const PersonalizedRecommendationsPanel = ({
 }) => {
   const [activeTab, setActiveTab] = useState(0);
 
-  // All color mode values defined at the top level of the component
   const cardBg = useColorModeValue("white", "gray.700");
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const accentBg = useColorModeValue("gray.50", "gray.800");
 
-  // Difficult theme colors
   const difficultBg = useColorModeValue("red.50", "red.900");
   const difficultBorder = useColorModeValue("red.100", "red.700");
   const difficultHeading = useColorModeValue("red.700", "red.200");
 
-  // Easy theme colors
   const easyBg = useColorModeValue("green.50", "green.900");
   const easyBorder = useColorModeValue("green.100", "green.700");
   const easyHeading = useColorModeValue("green.700", "green.200");
 
-  // Just right theme colors
   const justrightBg = useColorModeValue("blue.50", "blue.900");
   const justrightBorder = useColorModeValue("blue.100", "blue.700");
   const justrightHeading = useColorModeValue("blue.700", "blue.200");
 
-  // Early return if no data and not loading
   if (
     (!recommendations || Object.keys(recommendations).length === 0) &&
     !loading &&
@@ -111,7 +102,6 @@ const PersonalizedRecommendationsPanel = ({
     return null;
   }
 
-  // Get resource icon based on type
   const getResourceIcon = (type) => {
     switch (type) {
       case "pdf":
@@ -127,7 +117,6 @@ const PersonalizedRecommendationsPanel = ({
     }
   };
 
-  // Get category icon based on category
   const getCategoryIcon = (category) => {
     const lowercase = category?.toLowerCase() || "";
     switch (lowercase) {
@@ -146,7 +135,6 @@ const PersonalizedRecommendationsPanel = ({
     }
   };
 
-  // Get color scheme without hooks
   const getColorScheme = (difficulty) => {
     switch (difficulty) {
       case "difficult":
@@ -163,7 +151,7 @@ const PersonalizedRecommendationsPanel = ({
           heading: easyHeading,
           badge: "green",
         };
-      default: // justright
+      default:
         return {
           bg: justrightBg,
           border: justrightBorder,

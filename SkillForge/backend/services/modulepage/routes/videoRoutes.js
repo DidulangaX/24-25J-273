@@ -5,16 +5,16 @@ const upload = require("../middleware/upload");
 const uploadPdf = require("../middleware/uploadPdf");
 const resourceController = require("../controllers/resourceController");
 
-// Route for recommendations
 router.get("/:videoId/recommendations", videoController.getRecommendations);
 
-// Upload new video route
 router.post("/", upload.single("video"), videoController.createVideo);
 router.post("/clear-session", videoController.clearSession);
 
-// Basic video routes
 router.get("/", videoController.getVideos);
 router.get("/stream/:id", videoController.streamVideo);
+router.put("/:id", upload.single("video"), videoController.updateVideo);
+
+router.delete("/:id", videoController.deleteVideo);
 
 router.get("/resources/:difficultyLevel", resourceController.getResources);
 router.get(
@@ -27,14 +27,11 @@ router.post(
   resourceController.createResource
 );
 
-// Interaction tracking
 router.post("/interaction", videoController.trackInteraction);
 
-// Difficulty detection routes
 router.get("/difficulty/:videoId", videoController.getDifficulty);
 router.post("/difficulty-feedback", videoController.submitDifficultyFeedback);
 
-// New ML model routes
 router.post("/detect-difficulty/:videoId", videoController.detectDifficulty);
 router.get(
   "/model-recommendations/:videoId",
@@ -42,13 +39,10 @@ router.get(
 );
 router.post("/insights/:videoId", videoController.generateInsights);
 
-// Session management
 router.post("/end-session", videoController.endSession);
 
-// Get video by ID - keep at the bottom to avoid path conflicts
 router.get("/:id", videoController.getVideoById);
 
-// Debug route - keep as the last route
 router.get("*", (req, res, next) => {
   console.log("Route hit:", req.path);
   next();

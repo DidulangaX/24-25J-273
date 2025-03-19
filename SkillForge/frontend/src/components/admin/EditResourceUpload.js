@@ -1,4 +1,3 @@
-// src/components/admin/EditResourceUpload.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -46,7 +45,6 @@ const EditResourceUpload = () => {
   const queryParams = new URLSearchParams(location.search);
   const editId = resourceId || queryParams.get("edit");
 
-  // State for resource data
   const [videos, setVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState("");
   const [title, setTitle] = useState("");
@@ -68,7 +66,6 @@ const EditResourceUpload = () => {
   const [originalType, setOriginalType] = useState("");
 
   useEffect(() => {
-    // Fetch videos for dropdown
     const fetchVideos = async () => {
       try {
         const response = await axios.get("http://localhost:5000/api/videos");
@@ -87,7 +84,6 @@ const EditResourceUpload = () => {
 
     fetchVideos();
 
-    // If editing an existing resource, fetch its data
     if (editId) {
       fetchResourceData();
     } else {
@@ -103,7 +99,6 @@ const EditResourceUpload = () => {
       );
       const resourceData = response.data;
 
-      // Set form fields with resource data
       setTitle(resourceData.title || "");
       setDescription(resourceData.description || "");
       setType(resourceData.type || "text");
@@ -115,19 +110,16 @@ const EditResourceUpload = () => {
       setSelectedVideo(resourceData.videoId || "");
       setOriginalType(resourceData.type || "");
 
-      // Set tags
       if (resourceData.tags && resourceData.tags.length > 0) {
         setTags(resourceData.tags.join(", "));
       }
 
-      // Set file information if it's a PDF
       if (resourceData.type === "pdf" && resourceData.filePath) {
         const filename = resourceData.filePath.split("/").pop();
         setOriginalFileName(filename);
         setOriginalFilePath(resourceData.filePath);
       }
 
-      // If resource is linked to a video, fetch existing resources for that video
       if (resourceData.videoId) {
         try {
           const resourcesResponse = await axios.get(
@@ -159,7 +151,6 @@ const EditResourceUpload = () => {
 
     if (videoId) {
       try {
-        // Fetch existing resources for this video
         const response = await axios.get(
           `http://localhost:5000/api/resources/video/${videoId}`
         );
@@ -187,13 +178,11 @@ const EditResourceUpload = () => {
     try {
       const formData = new FormData();
 
-      // Add basic resource data
       formData.append("title", title);
       formData.append("description", description);
       formData.append("type", type);
       formData.append("recommendedFor", difficulty);
 
-      // Add section data if provided
       if (selectedVideo) {
         formData.append("videoId", selectedVideo);
       }
@@ -210,19 +199,17 @@ const EditResourceUpload = () => {
         formData.append("tags", tags);
       }
 
-      // Add content based on type
       if (type === "text") {
         formData.append("content", content);
       } else if (type === "link") {
         formData.append("url", url);
       } else if (file) {
-        formData.append("pdf", file); // For PDF uploads
+        formData.append("pdf", file);
       }
 
       let response;
 
       if (editId) {
-        // Update existing resource
         response = await axios.put(
           `http://localhost:5000/api/resources/${editId}`,
           formData,
@@ -234,7 +221,6 @@ const EditResourceUpload = () => {
         );
         setMessage("Resource updated successfully!");
       } else {
-        // Create new resource
         response = await axios.post(
           "http://localhost:5000/api/resources",
           formData,
@@ -262,7 +248,6 @@ const EditResourceUpload = () => {
         isClosable: true,
       });
 
-      // Navigate back to dashboard after short delay
       setTimeout(() => {
         navigate("/module-dashboard");
       }, 2000);
@@ -282,7 +267,6 @@ const EditResourceUpload = () => {
     }
   };
 
-  // Format time (seconds to MM:SS)
   const formatTime = (seconds) => {
     if (!seconds) return "00:00";
     const mins = Math.floor(seconds / 60);

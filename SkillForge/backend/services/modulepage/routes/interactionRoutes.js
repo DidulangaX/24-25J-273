@@ -1,4 +1,3 @@
-// routes/interactionRoutes.js
 const express = require("express");
 const router = express.Router();
 const {
@@ -7,11 +6,9 @@ const {
 } = require("../controllers/userInteractionController");
 const UserInteraction = require("../models/UserInteraction");
 
-// Existing routes
 router.post("/record", recordInteraction);
 router.post("/feedback", recordUserFeedback);
 
-// New route to check if user has already submitted feedback
 router.get("/feedback-status", async (req, res) => {
   try {
     const { videoId, userId } = req.query;
@@ -23,7 +20,6 @@ router.get("/feedback-status", async (req, res) => {
       });
     }
 
-    // Check if user has already submitted feedback
     const interaction = await UserInteraction.findOne({
       videoId,
       userId,

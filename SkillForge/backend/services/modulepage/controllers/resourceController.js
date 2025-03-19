@@ -1,16 +1,13 @@
-// controllers/resourceController.js
 const asyncHandler = require("express-async-handler");
 const Resource = require("../models/Resource");
 const path = require("path");
 const fs = require("fs");
 
-// Get ALL resources (for dashboard)
 const getAllResources = asyncHandler(async (req, res) => {
   const resources = await Resource.find().sort({ createdAt: -1 });
   res.status(200).json(resources);
 });
 
-// Get resources based on difficulty level
 const getResources = asyncHandler(async (req, res) => {
   const { difficultyLevel } = req.params;
   if (!["easy", "justright", "difficult", "all"].includes(difficultyLevel)) {
@@ -25,7 +22,6 @@ const getResources = asyncHandler(async (req, res) => {
   res.status(200).json(resources);
 });
 
-// Get resources for a specific video
 const getResourcesForVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
@@ -33,7 +29,6 @@ const getResourcesForVideo = asyncHandler(async (req, res) => {
   res.status(200).json(resources);
 });
 
-// Get a single resource by ID
 const getResourceById = asyncHandler(async (req, res) => {
   const resource = await Resource.findById(req.params.id);
 
@@ -45,7 +40,6 @@ const getResourceById = asyncHandler(async (req, res) => {
   res.status(200).json(resource);
 });
 
-// Create a new resource
 const createResource = asyncHandler(async (req, res) => {
   try {
     console.log("Resource creation request body:", req.body);

@@ -12,26 +12,22 @@ const getRecommendations = (userId) => {
   const allVideos = mockDb.getVideos();
   console.log("User interactions:", userInteractions);
 
-  // Calculate user's average difficulty level
   const userDifficulties = userInteractions.map(
     (interaction) => interaction.difficulty
   );
   const averageDifficulty =
-    userDifficulties.reduce((a, b) => a + b, 0) / userDifficulties.length || 2; // Default to 2 if no interactions
+    userDifficulties.reduce((a, b) => a + b, 0) / userDifficulties.length || 2;
 
   const userLevel = getDifficultyLevel(averageDifficulty);
 
-  // Get the videos the user has already watched
   const watchedVideoIds = new Set(
     userInteractions.map((interaction) => interaction.videoId)
   );
 
-  // Filter unwatched videos
   const unwatchedVideos = allVideos.filter(
     (video) => !watchedVideoIds.has(video.id)
   );
 
-  // Separate recommendations by difficulty
   const currentLevelVideos = unwatchedVideos.filter(
     (video) => getDifficultyLevel(video.difficulty) === userLevel
   );
@@ -71,5 +67,5 @@ const generateRecommendations = (userId, lastVideoDifficulty) => {
     );
   }
 
-  return recommendedVideos.slice(0, 3); // Return top 3 recommendations
+  return recommendedVideos.slice(0, 3);
 };

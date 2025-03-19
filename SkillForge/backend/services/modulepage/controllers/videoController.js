@@ -9,13 +9,10 @@ const { calculateDifficulty } = require("../utils/difficultyDetection");
 const { generateSummary } = require("../utils/interactionAnalytics");
 const DifficultyDetectionService = require("../services/difficultyDetectionService");
 
-// Initialize the difficulty detection service
 const difficultyService = new DifficultyDetectionService();
 
-// Store session interactions in memory - global variable
 let sessionInteractions = {};
 
-// Cleanup function to remove old interactions
 const cleanupOldInteractions = () => {
   // Keep only interactions from the last 30 minutes
   const cutoffTime = Date.now() - 30 * 60 * 1000;
@@ -44,7 +41,6 @@ const cleanupOldInteractions = () => {
   console.log("Cleaned up old interactions");
 };
 
-// Run cleanup every 5 minutes
 setInterval(cleanupOldInteractions, 5 * 60 * 1000);
 
 // Get all videos
@@ -73,7 +69,124 @@ exports.getMainVideos = async (req, res) => {
   }
 };
 
-// In videoController.js, enhance getRecommendations
+// Update existing video
+exports.updateVideo = async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    console.log(`Attempting to update video with ID: ${videoId}`);
+
+    const existingVideo = await Video.findById(videoId);
+    if (!existingVideo) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    const updateData = {
+      title: req.body.title || existingVideo.title,
+      description: req.body.description || existingVideo.description,
+      category: req.body.category || existingVideo.category,
+      difficultyLevel:
+        req.body.difficultyLevel || existingVideo.difficultyLevel,
+
+      sequenceId: req.body.sequenceId || existingVideo.sequenceId,
+      sequencePosition: req.body.sequencePosition
+        ? parseInt(req.body.sequencePosition, 10)
+        : existingVideo.sequencePosition,
+      level: req.body.level
+        ? parseInt(req.body.level, 10)
+        : existingVideo.level,
+    };
+
+    if (req.body.tags) {
+      if (typeof req.body.tags === "string") {
+        updateData.tags = req.body.tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag);
+      }
+    }
+
+    if (req.body.prerequisites) {
+      try {
+        if (typeof req.body.prerequisites === "string") {
+          updateData.prerequisites = JSON.parse(req.body.prerequisites);
+        } else if (Array.isArray(req.body.prerequisites)) {
+          updateData.prerequisites = req.body.prerequisites;
+        }
+      } catch (parseError) {
+        console.error("Error parsing prerequisites:", parseError);
+      }
+    }
+
+    if (req.file) {
+      console.log("New video file detected:", req.file.path);
+
+      const oldFilePath = existingVideo.filePath;
+
+      updateData.filePath = req.file.path;
+
+      if (oldFilePath && oldFilePath !== req.file.path) {
+        try {
+          const fs = require("fs");
+          if (fs.existsSync(oldFilePath)) {
+            console.log(`Deleting old video file: ${oldFilePath}`);
+            fs.unlinkSync(oldFilePath);
+          }
+        } catch (fileError) {
+          console.error("Error deleting old video file:", fileError);
+        }
+      }
+    }
+
+    console.log("Updating video with data:", updateData);
+
+    const updatedVideo = await Video.findByIdAndUpdate(videoId, updateData, {
+      new: true,
+    });
+
+    res.json(updatedVideo);
+  } catch (error) {
+    console.error("Error updating video:", error);
+    res.status(500).json({
+      message: "Error updating video",
+      error: error.message,
+    });
+  }
+};
+
+exports.deleteVideo = async (req, res) => {
+  try {
+    const videoId = req.params.id;
+    console.log(`Attempting to delete video with ID: ${videoId}`);
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    if (video.filePath) {
+      const fs = require("fs");
+      try {
+        if (fs.existsSync(video.filePath)) {
+          console.log(`Deleting video file: ${video.filePath}`);
+          fs.unlinkSync(video.filePath);
+        }
+      } catch (fileError) {
+        console.error("Error deleting video file:", fileError);
+      }
+    }
+
+    await Video.findByIdAndDelete(videoId);
+
+    res.json({ message: "Video deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    res.status(500).json({
+      message: "Error deleting video",
+      error: error.message,
+    });
+  }
+};
 exports.getRecommendations = async (req, res) => {
   try {
     const { videoId } = req.params;
@@ -165,9 +278,6 @@ exports.getVideoById = async (req, res) => {
   }
 };
 
-// Update this method in your videoController.js
-
-// Create new video
 exports.createVideo = async (req, res) => {
   try {
     if (!req.file) {
@@ -252,7 +362,6 @@ exports.createVideo = async (req, res) => {
   }
 };
 
-// In videoController.js
 exports.trackInteraction = (req, res) => {
   const { videoId, userId, interactionType, position, timestamp, ...metadata } =
     req.body;
@@ -301,7 +410,6 @@ exports.trackInteraction = (req, res) => {
   });
 };
 
-// Stream video
 exports.streamVideo = async (req, res) => {
   try {
     const videoId = req.params.id;
@@ -355,7 +463,6 @@ exports.streamVideo = async (req, res) => {
   }
 };
 
-// Get difficulty for a video
 exports.getDifficulty = async (req, res) => {
   try {
     const { videoId } = req.params;
@@ -424,7 +531,7 @@ exports.detectDifficulty = async (req, res) => {
     // Call Python script with interaction data as JSON
     const pythonScriptPath = path.join(
       __dirname,
-      "../utils/simple_predictor.py"
+      "../utils/difficulty_detector_model.py"
     );
     console.log(`Running Python script: ${pythonScriptPath}`);
 
@@ -550,21 +657,18 @@ exports.detectDifficulty = async (req, res) => {
   }
 };
 
-// Helper function to format time (seconds to MM:SS)
 function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
-// Helper function to format time (seconds to MM:SS)
 function formatTime(seconds) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.floor(seconds % 60);
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
-// Helper functions
 function calculateEngagementScore(interactionData) {
   const {
     session_duration = 0,
@@ -575,20 +679,15 @@ function calculateEngagementScore(interactionData) {
     skipped_content = 0,
   } = interactionData;
 
-  // Base score from session duration (max 40 points for 5+ minutes)
   const durationScore = Math.min(session_duration / 7.5, 40);
 
-  // Replay score (active engagement through review)
   const replayScore = Math.min(replay_frequency * 5, 20);
 
-  // Penalty for excessive skipping (disengagement)
   const skipPenalty = Math.min(skipped_content / 15, 20);
 
-  // Pause score (some pauses show engagement, too many suggest difficulty)
   const pauseScore = total_pauses > 0 ? Math.min(10, total_pauses * 2) : 0;
   const pausePenalty = Math.max(0, (total_pauses - 5) * 2);
 
-  // Calculate final score (capped between 0-100)
   return Math.max(
     0,
     Math.min(
@@ -610,7 +709,6 @@ function generateRecommendations(isDifficult, interactionData) {
   const recommendations = [];
 
   if (isDifficult) {
-    // Recommendations for content perceived as difficult
     recommendations.push(
       "Consider reviewing prerequisite content before continuing"
     );
@@ -637,7 +735,6 @@ function generateRecommendations(isDifficult, interactionData) {
       );
     }
   } else {
-    // Recommendations for content not perceived as difficult
     if (interactionData.session_duration > 120) {
       recommendations.push(
         "You seem to have a good grasp of this topic. Consider exploring related advanced content"
@@ -666,7 +763,6 @@ function generateRecommendations(isDifficult, interactionData) {
     }
   }
 
-  // If we don't have many recommendations, add a general one
   if (recommendations.length < 1) {
     recommendations.push(
       isDifficult
@@ -675,11 +771,9 @@ function generateRecommendations(isDifficult, interactionData) {
     );
   }
 
-  // Limit to 3 most relevant recommendations
   return recommendations.slice(0, 3);
 }
 
-// Add these helper functions
 function calculateEngagementScore(interactionData) {
   const {
     session_duration = 0,
@@ -720,8 +814,6 @@ function getEngagementLevel(score) {
   if (score >= 20) return "Low Engagement";
   return "Very Low Engagement";
 }
-
-//  update submitDifficultyFeedback in videoController.js
 
 exports.submitDifficultyFeedback = async (req, res) => {
   try {
@@ -948,7 +1040,6 @@ exports.submitDifficultyFeedback = async (req, res) => {
   }
 };
 
-// Helper function to format resource URL
 function formatResourceUrl(resource) {
   if (!resource) return "";
 
@@ -967,7 +1058,6 @@ function formatResourceUrl(resource) {
   return "";
 }
 
-// Replace the getRecommendationsForVideo function in the backend's videoController.js
 async function getRecommendationsForVideo(videoId, difficulty) {
   try {
     console.log(
@@ -1129,11 +1219,9 @@ async function getRecommendationsForVideo(videoId, difficulty) {
   }
 }
 
-// Add this formatResource function if it's not already defined
 function formatResource(resource) {
   if (!resource) return null;
 
-  // Default resource structure
   const formattedResource = {
     _id: resource._id ? resource._id.toString() : `resource-${Date.now()}`,
     title: resource.title || "Learning Resource",
@@ -1166,11 +1254,9 @@ function formatResource(resource) {
 
   return formattedResource;
 }
-// Helper function to format resources consistently
 function formatResource(resource) {
   if (!resource) return null;
 
-  // Default resource structure
   const formattedResource = {
     _id: resource._id ? resource._id.toString() : `resource-${Date.now()}`,
     title: resource.title || "Learning Resource",
@@ -1180,9 +1266,7 @@ function formatResource(resource) {
   };
 
   try {
-    // Process URL based on resource type
     if (resource.type === "pdf" && resource.filePath) {
-      // Extract filename from path
       const filename =
         typeof resource.filePath === "string"
           ? resource.filePath.split(/[\/\\]/).pop()
@@ -1204,7 +1288,6 @@ function formatResource(resource) {
   return formattedResource;
 }
 
-// Replace the submitDifficultyFeedback function in the backend's videoController.js
 exports.submitDifficultyFeedback = async (req, res) => {
   try {
     const { videoId, userId, perceivedDifficulty, comments } = req.body;
@@ -1324,7 +1407,6 @@ exports.submitDifficultyFeedback = async (req, res) => {
   }
 };
 
-// Helper function to format resource objects consistently
 function formatResource(resource) {
   if (!resource) return null;
 
@@ -1353,7 +1435,6 @@ function formatResource(resource) {
   };
 }
 
-// In videoController.js - enhance getModelRecommendations
 exports.getModelRecommendations = async (req, res) => {
   try {
     const { videoId } = req.params;
@@ -1441,7 +1522,6 @@ exports.getModelRecommendations = async (req, res) => {
   }
 };
 
-// In videoController.js - replace endSession
 exports.endSession = async (req, res) => {
   try {
     const { videoId, userId } = req.body;
@@ -1499,7 +1579,6 @@ exports.endSession = async (req, res) => {
   }
 };
 
-// In videoController.js - add this new function
 exports.clearSession = async (req, res) => {
   try {
     const { videoId, userId } = req.body;
@@ -1533,7 +1612,6 @@ exports.clearSession = async (req, res) => {
   }
 };
 
-// Generate learning insights report for a session
 exports.generateInsights = async (req, res) => {
   try {
     const { videoId } = req.params;

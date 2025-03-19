@@ -62,7 +62,6 @@ const ResourceUpload = () => {
 
     if (videoId) {
       try {
-        // Fetch existing resources for this video
         const response = await axios.get(
           `http://localhost:5000/api/videos/resources/video/${videoId}`
         );
@@ -85,13 +84,11 @@ const ResourceUpload = () => {
     try {
       const formData = new FormData();
 
-      // Add basic resource data
       formData.append("title", title);
       formData.append("description", description);
       formData.append("type", type);
       formData.append("recommendedFor", difficulty);
 
-      // Add section data if provided
       if (selectedVideo) {
         formData.append("videoId", selectedVideo);
       }
@@ -108,13 +105,12 @@ const ResourceUpload = () => {
         formData.append("tags", tags);
       }
 
-      // Add content based on type
       if (type === "text") {
         formData.append("content", content);
       } else if (type === "link") {
         formData.append("url", url);
       } else if (file) {
-        formData.append("pdf", file); // For PDF uploads
+        formData.append("pdf", file);
       }
 
       console.log("Submitting resource with data:", {
@@ -142,7 +138,6 @@ const ResourceUpload = () => {
       console.log("Resource creation response:", response.data);
       setMessage("Resource added successfully!");
 
-      // Reset form
       setTitle("");
       setDescription("");
       setContent("");
@@ -153,7 +148,6 @@ const ResourceUpload = () => {
       setSectionEnd("");
       setTags("");
 
-      // Refresh resources if a video is selected
       if (selectedVideo) {
         try {
           const resourceResponse = await axios.get(
@@ -172,7 +166,6 @@ const ResourceUpload = () => {
     }
   };
 
-  // Format time (seconds to MM:SS)
   const formatTime = (seconds) => {
     if (!seconds) return "00:00";
     const mins = Math.floor(seconds / 60);

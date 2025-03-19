@@ -1,4 +1,3 @@
-// src/components/modulePage/InteractionGuidance/InteractionGuidance.js
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -17,11 +16,10 @@ import {
 import { InfoIcon, WarningIcon, CheckCircleIcon } from "@chakra-ui/icons";
 import { FaLightbulb, FaPauseCircle, FaUndo, FaForward } from "react-icons/fa";
 
-// Guidance patterns to detect
 const PATTERNS = {
   EXCESSIVE_PAUSING: {
     threshold: 3,
-    timeframe: 60, // seconds
+    timeframe: 60,
     level: "info",
     title: "Pausing Frequently?",
     icon: FaPauseCircle,
@@ -31,7 +29,7 @@ const PATTERNS = {
   },
   MULTIPLE_REPLAYS: {
     threshold: 2,
-    timeframe: 120, // seconds
+    timeframe: 120,
     level: "warning",
     title: "Repeating Content?",
     icon: FaUndo,
@@ -41,7 +39,7 @@ const PATTERNS = {
   },
   SKIPPING_FORWARD: {
     threshold: 3,
-    timeframe: 60, // seconds
+    timeframe: 60,
     level: "info",
     title: "Skipping Content?",
     icon: FaForward,
@@ -50,7 +48,7 @@ const PATTERNS = {
     action: "Find Advanced Content",
   },
   LEARNING_INSIGHT: {
-    threshold: 10, // minimum interactions
+    threshold: 10,
     level: "success",
     title: "Learning Insight",
     icon: FaLightbulb,
@@ -66,12 +64,9 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
   const [showGuidance, setShowGuidance] = useState(false);
 
   useEffect(() => {
-    // Only analyze after collecting enough data
     if (!interactionData || interactionData.interactionCount < 5) return;
 
-    // Don't show guidance that was dismissed
     const detectPatterns = () => {
-      // Get recent interactions based on current video position
       const {
         totalPauses,
         replayEvents,
@@ -84,7 +79,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
 
       const currentTime = Date.now();
 
-      // Check for excessive pausing in recent timeframe
       if (
         totalPauses >= PATTERNS.EXCESSIVE_PAUSING.threshold &&
         lastPauseTime &&
@@ -95,7 +89,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
         return "EXCESSIVE_PAUSING";
       }
 
-      // Check for multiple replays of the same section
       if (
         replayEvents >= PATTERNS.MULTIPLE_REPLAYS.threshold &&
         lastReplayTime &&
@@ -106,7 +99,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
         return "MULTIPLE_REPLAYS";
       }
 
-      // Check for rapid skipping forward
       if (
         seekForwardEvents >= PATTERNS.SKIPPING_FORWARD.threshold &&
         lastSkipTime &&
@@ -117,7 +109,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
         return "SKIPPING_FORWARD";
       }
 
-      // General learning insight after sufficient interaction
       if (
         interactionCount >= PATTERNS.LEARNING_INSIGHT.threshold &&
         !dismissed.includes("LEARNING_INSIGHT")
@@ -134,7 +125,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
       setActiveGuidance(detectedPattern);
       setShowGuidance(true);
 
-      // Auto-hide guidance after 15 seconds
       const timer = setTimeout(() => {
         setShowGuidance(false);
       }, 15000);
@@ -143,7 +133,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
     }
   }, [interactionData, videoPosition, dismissed, activeGuidance]);
 
-  // Handle dismissal
   const handleDismiss = () => {
     if (activeGuidance) {
       setDismissed([...dismissed, activeGuidance]);
@@ -151,7 +140,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
     }
   };
 
-  // Handle action
   const handleAction = () => {
     if (activeGuidance && onAction) {
       onAction(activeGuidance);
@@ -159,7 +147,6 @@ const InteractionGuidance = ({ interactionData, videoPosition, onAction }) => {
     }
   };
 
-  // Don't render if no guidance or if hidden
   if (!activeGuidance || !showGuidance) return null;
 
   const currentPattern = PATTERNS[activeGuidance];

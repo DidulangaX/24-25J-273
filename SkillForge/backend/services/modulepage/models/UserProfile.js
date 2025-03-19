@@ -1,4 +1,3 @@
-// models/UserProfile.js
 const mongoose = require("mongoose");
 
 const userProfileSchema = new mongoose.Schema({
@@ -8,7 +7,6 @@ const userProfileSchema = new mongoose.Schema({
     unique: true,
   },
 
-  // Learning history - videos watched with metadata
   learningHistory: [
     {
       videoId: {
@@ -35,7 +33,6 @@ const userProfileSchema = new mongoose.Schema({
     },
   ],
 
-  // Skill levels across different topics
   skillLevels: {
     type: Map,
     of: {
@@ -46,7 +43,6 @@ const userProfileSchema = new mongoose.Schema({
     default: {},
   },
 
-  // User preferences
   preferences: {
     learningStyle: {
       type: String,
@@ -68,7 +64,6 @@ const userProfileSchema = new mongoose.Schema({
     },
   },
 
-  // Timestamp fields
   createdAt: {
     type: Date,
     default: Date.now,
@@ -79,7 +74,6 @@ const userProfileSchema = new mongoose.Schema({
   },
 });
 
-// Add indices for efficient queries
 userProfileSchema.index({ userId: 1 });
 userProfileSchema.index({ "learningHistory.videoId": 1 });
 userProfileSchema.index({ "learningHistory.tags": 1 });

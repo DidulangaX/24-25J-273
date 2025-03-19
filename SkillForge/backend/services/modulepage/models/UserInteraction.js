@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const userInteractionSchema = new mongoose.Schema({
   userId: {
-    // Change this from ObjectId to String
     type: String,
     required: true,
   },

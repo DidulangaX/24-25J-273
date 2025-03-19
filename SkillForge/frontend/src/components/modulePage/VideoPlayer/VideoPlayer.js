@@ -1,6 +1,3 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable react-hooks/exhaustive-deps */
-// src/components/modulePage/VideoPlayer/VideoPlayer.js
 import React, { useRef, useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -63,7 +60,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
   });
 
   useEffect(() => {
-    // If parent component wants interaction updates
     if (onInteractionUpdate) {
       onInteractionUpdate({
         interactionCount,
@@ -79,26 +75,21 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   }, [interactionMetrics, interactionCount, currentTime, onInteractionUpdate]);
 
-  // Chakra UI colors
   const controlsBg = useColorModeValue("blackAlpha.700", "blackAlpha.800");
   const sliderColor = useColorModeValue("blue.500", "blue.300");
   const timeColor = useColorModeValue("white", "gray.100");
   const tooltipBg = useColorModeValue("gray.700", "gray.900");
 
-  // When the component mounts or videoId changes, clear previous session data
   useEffect(() => {
-    // Clear previous session when the video changes
     if (videoId) {
       clearPreviousSession();
     }
 
-    // Clean up when the component unmounts
     return () => {
       endSession();
     };
   }, [videoId]);
 
-  // Update time display
   useEffect(() => {
     const updateTime = () => {
       if (videoRef.current) {
@@ -123,7 +114,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     };
   }, []);
 
-  // Auto-hide controls after inactivity
   useEffect(() => {
     const handleMouseMove = () => {
       setShowControls(true);
@@ -151,13 +141,10 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     };
   }, [isPlaying, controlTimeout]);
 
-  // Clear previous session data
   const clearPreviousSession = async () => {
     try {
-      // Reset the interaction counter
       setInteractionCount(0);
 
-      // Let the server know we're starting a new video
       await axios.post("http://localhost:5000/api/videos/clear-session", {
         userId,
         videoId,
@@ -169,7 +156,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // End the current session
   const endSession = async () => {
     try {
       if (videoId && userId) {
@@ -184,7 +170,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Format time (seconds to MM:SS)
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds < 0) return "00:00";
     const minutes = Math.floor(seconds / 60);
@@ -194,7 +179,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
       .padStart(2, "0")}`;
   };
 
-  // Toggle play/pause
   const togglePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
@@ -206,7 +190,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Toggle mute
   const toggleMute = () => {
     if (videoRef.current) {
       videoRef.current.muted = !isMuted;
@@ -214,7 +197,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Change volume
   const handleVolumeChange = (value) => {
     if (videoRef.current) {
       videoRef.current.volume = value;
@@ -223,7 +205,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Seek to position
   const handleSeek = (value) => {
     if (videoRef.current) {
       videoRef.current.currentTime = value;
@@ -231,7 +212,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Skip forward 10 seconds
   const skipForward = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.min(
@@ -242,7 +222,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Skip backward 10 seconds
   const skipBackward = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = Math.max(
@@ -253,7 +232,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Toggle fullscreen
   const toggleFullscreen = () => {
     const player = document.querySelector(".video-player-container");
 
@@ -278,7 +256,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Change playback speed
   const changePlaybackSpeed = (speed) => {
     if (videoRef.current) {
       videoRef.current.playbackRate = speed;
@@ -287,11 +264,9 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
 
   const trackInteraction = async (type, data = {}) => {
     try {
-      // Show brief interaction tooltip
       setInteractionTooltip(true);
       setTimeout(() => setInteractionTooltip(false), 1500);
 
-      // Always include current position
       const position = videoRef.current ? videoRef.current.currentTime : 0;
       const payload = {
         videoId,
@@ -302,14 +277,12 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         ...data,
       };
 
-      // Update local metrics
       setInteractionMetrics((prev) => {
         const newMetrics = {
           ...prev,
           interactionCount: prev.interactionCount + 1,
         };
 
-        // Track specific interaction types
         if (type === "pause") {
           newMetrics.totalPauses = prev.totalPauses + 1;
           newMetrics.lastPauseTime = Date.now();
@@ -317,8 +290,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
           newMetrics.replayEvents = prev.replayEvents + 1;
           newMetrics.lastReplayTime = Date.now();
 
-          // Track difficult sections
-          const section = Math.floor(position / 10) * 10; // Group by 10-second sections
+          const section = Math.floor(position / 10) * 10;
           const difficultSections = [...prev.difficultSections];
           const existingIndex = difficultSections.findIndex(
             (s) => s.start === section

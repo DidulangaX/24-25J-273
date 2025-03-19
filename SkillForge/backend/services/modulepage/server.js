@@ -1,4 +1,3 @@
-// server.js
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -6,19 +5,15 @@ const mongoose = require("mongoose");
 const path = require("path");
 const fs = require("fs");
 
-// Load environment variables
 dotenv.config();
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Initialize session interactions storage for recommendation engine
-app.set("sessionInteractions", {}); // Global storage for session data
+app.set("sessionInteractions", {});
 
-// Connect to MongoDB
 mongoose
   .connect(process.env.MONGO, {
     useNewUrlParser: true,
@@ -30,13 +25,11 @@ mongoose
     process.exit(1);
   });
 
-// Log directories for debugging
 const uploadsPath = path.join(__dirname, "uploads");
 const pdfsPath = path.join(__dirname, "uploads/pdfs");
 console.log("Uploads path:", uploadsPath);
 console.log("PDFs path:", pdfsPath);
 
-// Create directories if they don't exist
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
   console.log("Created uploads directory");
@@ -46,7 +39,6 @@ if (!fs.existsSync(pdfsPath)) {
   console.log("Created uploads/pdfs directory");
 }
 
-// Make uploads folder static
 app.use("/uploads", express.static(uploadsPath));
 app.use("/uploads/pdfs", express.static(pdfsPath));
 
@@ -54,123 +46,6 @@ app.use("/uploads/pdfs", express.static(pdfsPath));
 app.use((req, res, next) => {
   console.log("Request path:", req.path);
   next();
-});
-
-// Enhanced PDF viewing routes - these come before other routes
-// 1. Direct PDF viewing route with proper headers
-app.get("/direct-pdf/:filename", (req, res) => {
-  const { filename } = req.params;
-
-  // First try uploads/pdfs directory
-  let pdfPath = path.join(__dirname, "uploads/pdfs", filename);
-
-  // If not found there, try the general uploads directory
-  if (!fs.existsSync(pdfPath)) {
-    pdfPath = path.join(__dirname, "uploads", filename);
-  }
-
-  console.log(`Looking for PDF at: ${pdfPath}`);
-
-  if (fs.existsSync(pdfPath)) {
-    console.log("PDF found, sending file with inline disposition");
-
-    // These headers are critical to display in browser instead of downloading
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-
-    // Send the file
-    return res.sendFile(pdfPath);
-  }
-
-  console.log("PDF not found");
-  res.status(404).send("PDF not found");
-});
-
-// 2. PDF.js viewer route for better browser compatibility
-app.get("/pdf-viewer/:filename", (req, res) => {
-  const { filename } = req.params;
-  const pdfUrl = `/direct-pdf/${filename}`;
-  const host = req.get("host");
-  const protocol = req.protocol;
-  const fullPdfUrl = `${protocol}://${host}${pdfUrl}`;
-
-  // Send a simple HTML page with PDF.js viewer
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>PDF Viewer</title>
-      <style>
-        body, html { 
-          margin: 0; 
-          padding: 0; 
-          height: 100%; 
-          overflow: hidden; 
-        }
-        #pdf-viewer {
-          width: 100%;
-          height: 100vh;
-          border: none;
-        }
-      </style>
-    </head>
-    <body>
-      <iframe 
-        id="pdf-viewer" 
-        src="https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(
-          fullPdfUrl
-        )}"
-        title="PDF Viewer">
-      </iframe>
-    </body>
-    </html>
-  `);
-});
-
-// 3. View PDF route with additional logging for debugging
-app.get("/view-pdf/:filename", (req, res) => {
-  const { filename } = req.params;
-
-  // First try uploads/pdfs directory
-  let pdfPath = path.join(__dirname, "uploads/pdfs", filename);
-
-  // If not found there, try the general uploads directory
-  if (!fs.existsSync(pdfPath)) {
-    pdfPath = path.join(__dirname, "uploads", filename);
-  }
-
-  // If still not found, check one level up (possible server configuration)
-  if (!fs.existsSync(pdfPath)) {
-    pdfPath = path.join(__dirname, "..", "uploads/pdfs", filename);
-  }
-
-  console.log(`Looking for PDF at: ${pdfPath}`);
-
-  if (fs.existsSync(pdfPath)) {
-    console.log("PDF found, sending file with inline disposition");
-
-    // Try to get file stats for debugging
-    try {
-      const stats = fs.statSync(pdfPath);
-      console.log(`File size: ${stats.size} bytes`);
-      console.log(`File permissions: ${stats.mode.toString(8)}`);
-    } catch (err) {
-      console.error("Error getting file stats:", err);
-    }
-
-    // These headers are critical to display in browser instead of downloading
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-    res.setHeader("Accept-Ranges", "bytes");
-
-    // Send the file
-    return res.sendFile(pdfPath);
-  }
-
-  console.log("PDF not found");
-  res.status(404).send("PDF not found");
 });
 
 // Routes
@@ -193,7 +68,6 @@ app.use("/api/videos/interaction", (req, res, next) => {
   // Store interaction in app-level session data
   const sessionInteractions = app.get("sessionInteractions") || {};
 
-  // Initialize if needed
   if (!sessionInteractions[videoId]) {
     sessionInteractions[videoId] = {};
   }
@@ -201,46 +75,26 @@ app.use("/api/videos/interaction", (req, res, next) => {
     sessionInteractions[videoId][userId] = [];
   }
 
-  // Add the interaction
   sessionInteractions[videoId][userId].push({
     ...req.body,
     timestamp: timestamp || new Date().toISOString(),
   });
 
-  // Update app variable
   app.set("sessionInteractions", sessionInteractions);
 
-  // Continue with request
   next();
 });
 
-// Add a route to list all PDFs for debugging
 app.get("/list-pdfs", (req, res) => {
   try {
-    // Check if the pdfs directory exists
     if (!fs.existsSync(pdfsPath)) {
       return res.json({
         error: "PDFs directory doesn't exist",
         directory: pdfsPath,
       });
     }
-    // Read files from the directory
     const files = fs.readdirSync(pdfsPath);
-    // Get details for each file
-    const pdfs = files.map((file) => {
-      const fullPath = path.join(pdfsPath, file);
-      const stats = fs.statSync(fullPath);
-      return {
-        name: file,
-        path: fullPath,
-        url: `/uploads/pdfs/${file}`,
-        directUrl: `/direct-pdf/${file}`,
-        pdfViewerUrl: `/pdf-viewer/${file}`,
-        viewPdfUrl: `/view-pdf/${file}`,
-        size: stats.size,
-        created: stats.birthtime,
-      };
-    });
+
     res.json({
       count: pdfs.length,
       directory: pdfsPath,
@@ -264,12 +118,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Add this after all your routes are registered
 app.get("/api-routes", (req, res) => {
   const routes = [];
   app._router.stack.forEach((middleware) => {
     if (middleware.route) {
-      // Routes registered directly on the app
       routes.push({
         path: middleware.route.path,
         method: Object.keys(middleware.route.methods)[0].toUpperCase(),
@@ -294,28 +146,23 @@ app.get("/api-routes", (req, res) => {
   res.json(routes);
 });
 
-// Session cleanup function to remove old interactions
 const cleanupOldInteractions = () => {
   const sessionInteractions = app.get("sessionInteractions") || {};
-  // Keep only interactions from the last 30 minutes
   const cutoffTime = Date.now() - 30 * 60 * 1000;
 
   for (const videoId in sessionInteractions) {
     for (const userId in sessionInteractions[videoId]) {
-      // Filter out old interactions
       sessionInteractions[videoId][userId] = sessionInteractions[videoId][
         userId
       ].filter(
         (interaction) => new Date(interaction.timestamp).getTime() > cutoffTime
       );
 
-      // Remove empty user arrays
       if (sessionInteractions[videoId][userId].length === 0) {
         delete sessionInteractions[videoId][userId];
       }
     }
 
-    // Remove empty video objects
     if (Object.keys(sessionInteractions[videoId]).length === 0) {
       delete sessionInteractions[videoId];
     }
@@ -331,11 +178,4 @@ setInterval(cleanupOldInteractions, 5 * 60 * 1000);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(
-    `- View PDF files at: http://localhost:${PORT}/view-pdf/FILENAME.pdf`
-  );
-  console.log(
-    `- Access PDF.js viewer at: http://localhost:${PORT}/pdf-viewer/FILENAME.pdf`
-  );
-  console.log(`- View all PDFs at: http://localhost:${PORT}/list-pdfs`);
 });

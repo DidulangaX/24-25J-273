@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 
-// Import components
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import LearningAnalytics from "./LearningAnalytics/LearningAnalytics";
 import FeedbackPrompt from "./FeedbackPrompt/FeedbackPrompt";
@@ -45,12 +44,10 @@ const ModulePage = ({ userId = "user123" }) => {
   const [error, setError] = useState(null);
   const [showPlayer, setShowPlayer] = useState(false);
 
-  // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
-  // Personalized recommendations state
   const [personalizedRecommendations, setPersonalizedRecommendations] =
     useState(null);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
@@ -62,7 +59,6 @@ const ModulePage = ({ userId = "user123" }) => {
   const analyticsRef = useRef(null);
   const toast = useToast();
 
-  // Chakra UI color mode values
   const cardBg = useColorModeValue("white", "gray.700");
   const bgGradient = useColorModeValue(
     "linear(to-r, blue.400, blue.600)",
@@ -72,7 +68,6 @@ const ModulePage = ({ userId = "user123" }) => {
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const headerBg = useColorModeValue("blue.50", "blue.900");
 
-  // Fetch all videos
   useEffect(() => {
     const fetchVideos = async () => {
       try {
@@ -81,18 +76,16 @@ const ModulePage = ({ userId = "user123" }) => {
         if (response.data.length > 0) {
           setVideos(response.data);
           setFilteredVideos(response.data);
-          // If videoId is provided in URL, use that video
           if (videoId) {
             const video = response.data.find((v) => v._id === videoId);
             if (video) {
               setSelectedVideo(video);
-              setShowPlayer(true); // Automatically show player when video is in URL
+              setShowPlayer(true);
             } else {
               setSelectedVideo(null);
               setError(`Video with ID ${videoId} not found.`);
             }
           } else {
-            // Otherwise just load the videos without selecting one
             setSelectedVideo(null);
           }
         } else {
@@ -108,12 +101,10 @@ const ModulePage = ({ userId = "user123" }) => {
     fetchVideos();
   }, [videoId]);
 
-  // Filter videos when search term or filters change
   useEffect(() => {
     if (videos.length === 0) return;
 
     const filtered = videos.filter((video) => {
-      // Apply search term filter (case insensitive)
       const matchesSearch =
         searchTerm === "" ||
         video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,11 +113,9 @@ const ModulePage = ({ userId = "user123" }) => {
         (video.category &&
           video.category.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      // Apply difficulty filter
       const matchesDifficulty =
         difficultyFilter === "" || video.difficultyLevel === difficultyFilter;
 
-      // Apply category filter
       const matchesCategory =
         categoryFilter === "" || video.category === categoryFilter;
 
@@ -136,7 +125,6 @@ const ModulePage = ({ userId = "user123" }) => {
     setFilteredVideos(filtered);
   }, [searchTerm, difficultyFilter, categoryFilter, videos]);
 
-  // Extract unique categories for filter dropdown
   const categories = [
     ...new Set(videos.map((video) => video.category).filter(Boolean)),
   ];
@@ -145,7 +133,6 @@ const ModulePage = ({ userId = "user123" }) => {
     setSelectedVideo(video);
     setShowPlayer(true);
     setViewingResource(null);
-    // Reset recommendations when changing videos
     setPersonalizedRecommendations(null);
     setRecommendationsError(null);
     setShowAnalytics(false);
@@ -154,22 +141,18 @@ const ModulePage = ({ userId = "user123" }) => {
   const handleBackToVideos = () => {
     setShowPlayer(false);
     setViewingResource(null);
-    // Reset recommendations when going back to video list
     setPersonalizedRecommendations(null);
     setRecommendationsError(null);
     setShowAnalytics(false);
   };
 
-  // Handle opening resources
   const handleOpenResource = (resource) => {
     console.log("Opening resource:", resource);
     setViewingResource(resource);
   };
 
-  // Handle analytics toggle
   const handleToggleAnalytics = () => {
     setShowAnalytics(!showAnalytics);
-    // Scroll to analytics section if opening
     if (!showAnalytics && analyticsRef.current) {
       setTimeout(() => {
         analyticsRef.current.scrollIntoView({ behavior: "smooth" });
@@ -198,7 +181,6 @@ const ModulePage = ({ userId = "user123" }) => {
   const handleFeedbackSubmit = async (difficulty, responseData) => {
     console.log(`Feedback received with difficulty: ${difficulty}`);
 
-    // Show toast notification for feedback
     toast({
       title: "Feedback received",
       description: `You rated this content as ${
@@ -213,10 +195,8 @@ const ModulePage = ({ userId = "user123" }) => {
       isClosable: true,
     });
 
-    // Debug: Log full response data
     console.log("Full response from feedback:", responseData);
 
-    // Validate response data
     if (!responseData || !responseData.success) {
       console.error("Invalid response from server:", responseData);
       setRecommendationsError(
@@ -225,16 +205,13 @@ const ModulePage = ({ userId = "user123" }) => {
       return;
     }
 
-    // Set recommendations from response
     if (responseData.recommendations) {
-      // Create a formatted recommendations object with the explicit difficulty
       const formattedRecommendations = {
         resources: Array.isArray(responseData.recommendations.resources)
           ? responseData.recommendations.resources
           : [],
         nextVideo: responseData.recommendations.nextVideo || null,
         learningPath: responseData.recommendations.learningPath || [],
-        // IMPORTANT: Make sure difficulty is explicitly set from user feedback
         difficulty: difficulty,
       };
 
@@ -282,7 +259,6 @@ const ModulePage = ({ userId = "user123" }) => {
         });
       }
     } else {
-      // If no recommendations, create a basic structure with difficulty
       const basicRecommendations = {
         resources: [],
         nextVideo: null,
@@ -304,11 +280,9 @@ const ModulePage = ({ userId = "user123" }) => {
     }
   };
 
-  // Handler for guidance actions
   const handleGuidanceAction = (actionType) => {
     switch (actionType) {
       case "EXCESSIVE_PAUSING":
-        // Open a note-taking panel or provide tips
         toast({
           title: "Note-Taking Tips",
           description:
@@ -319,14 +293,12 @@ const ModulePage = ({ userId = "user123" }) => {
         });
         break;
       case "MULTIPLE_REPLAYS":
-        // Show resources for difficult sections
         setShowAnalytics(true);
         setTimeout(() => {
           analyticsRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 100);
         break;
       case "SKIPPING_FORWARD":
-        // Suggest more advanced content
         toast({
           title: "Looking for more challenge?",
           description:
@@ -337,7 +309,6 @@ const ModulePage = ({ userId = "user123" }) => {
         });
         break;
       case "LEARNING_INSIGHT":
-        // Open learning analytics
         setShowAnalytics(true);
         setTimeout(() => {
           analyticsRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -348,23 +319,14 @@ const ModulePage = ({ userId = "user123" }) => {
     }
   };
 
-  // Handle viewing a recommended video
   const handleViewRecommendedVideo = (video) => {
-    // Navigate to the recommended video
     if (video && video._id) {
-      // You can either change the URL or just update the current video
-      // Option 1: Navigate to a new URL
-      // history.push(`/module-page/${video._id}`);
-
-      // Option 2: Just update the current video
       setSelectedVideo(video);
       setViewingResource(null);
       setPersonalizedRecommendations(null);
 
-      // Reset other state as needed
       setShowAnalytics(false);
 
-      // Show confirmation toast
       toast({
         title: "Video changed",
         description: `Now playing: ${video.title}`,
@@ -374,7 +336,6 @@ const ModulePage = ({ userId = "user123" }) => {
     }
   };
 
-  // Get difficulty badge for card styling
   const getDifficultyProps = (level) => {
     switch (level) {
       case "beginner":
@@ -388,18 +349,14 @@ const ModulePage = ({ userId = "user123" }) => {
     }
   };
 
-  // Generate thumbnail URL based on video data
   const getThumbnailUrl = (video) => {
-    // If video has a thumbnailPath, use it
     if (video.thumbnailPath && video.thumbnailPath.trim() !== "") {
-      // If it's a full URL, use as is, otherwise prepend with your API base
       if (video.thumbnailPath.startsWith("http")) {
         return video.thumbnailPath;
       } else {
         return `http://localhost:5000/${video.thumbnailPath}`;
       }
     }
-    // If no thumbnail, return a default one based on category
     const categoryImages = {
       programming:
         "https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2072&q=80",
@@ -416,7 +373,6 @@ const ModulePage = ({ userId = "user123" }) => {
     );
   };
 
-  // Loading state
   if (loading) {
     return (
       <Flex justify="center" align="center" h="300px">
@@ -425,7 +381,6 @@ const ModulePage = ({ userId = "user123" }) => {
     );
   }
 
-  // Return complete UI based on state
   return (
     <Box maxW="1200px" mx="auto" p={4} pt={20}>
       {/* Welcome Header - Only show when not viewing a video */}

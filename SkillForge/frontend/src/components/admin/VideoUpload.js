@@ -1,4 +1,3 @@
-// src/components/admin/VideoUpload.js
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -39,7 +38,6 @@ import { HiUpload } from "react-icons/hi";
 import { FaStar } from "react-icons/fa";
 
 const VideoUpload = () => {
-  // Original state variables
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -50,10 +48,9 @@ const VideoUpload = () => {
   const [message, setMessage] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
-  // New state variables for enhanced learning path
   const [sequenceId, setSequenceId] = useState("");
   const [sequencePosition, setSequencePosition] = useState(1);
-  const [level, setLevel] = useState(3); // Numeric difficulty level (1-5)
+  const [level, setLevel] = useState(3);
   const [tags, setTags] = useState("");
   const [tagArray, setTagArray] = useState([]);
   const [existingVideos, setExistingVideos] = useState([]);
@@ -62,7 +59,6 @@ const VideoUpload = () => {
 
   const toast = useToast();
 
-  // Fetch existing videos for prerequisites selection
   useEffect(() => {
     const fetchVideos = async () => {
       try {
@@ -137,7 +133,6 @@ const VideoUpload = () => {
     try {
       const formData = new FormData();
 
-      // Add basic video info
       formData.append("video", file);
       formData.append("title", title);
       formData.append("description", description);
@@ -145,7 +140,6 @@ const VideoUpload = () => {
       formData.append("difficultyLevel", difficultyLevel);
       formData.append("isRecommendation", "false");
 
-      // Add learning path info
       formData.append("sequenceId", sequenceId);
       formData.append("sequencePosition", sequencePosition);
       formData.append("level", level);

@@ -1,4 +1,3 @@
-// src/components/modulePage/LearningAnalytics/LearningAnalytics.js
 import React, { useState } from "react";
 import axios from "axios";
 import {
@@ -67,10 +66,6 @@ import {
   FaLock,
 } from "react-icons/fa";
 
-/**
- * Enhanced Learning Analytics component with professional design
- * Provides insights based on user's viewing patterns and learning behavior
- */
 const LearningAnalytics = ({ videoId, userId }) => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -81,7 +76,6 @@ const LearningAnalytics = ({ videoId, userId }) => {
   const [showInsightsSection, setShowInsightsSection] = useState(true);
   const [showSectionsSection, setShowSectionsSection] = useState(true);
 
-  // Colors
   const cardBg = useColorModeValue("white", "gray.700");
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const difficultBg = useColorModeValue("red.50", "red.900");
@@ -91,7 +85,6 @@ const LearningAnalytics = ({ videoId, userId }) => {
   const accentColor = useColorModeValue("blue.500", "blue.200");
   const subtleTextColor = useColorModeValue("gray.600", "gray.400");
 
-  // Analyze learning patterns
   const analyzeLearning = async () => {
     if (!videoId || !userId) return;
 
@@ -109,9 +102,7 @@ const LearningAnalytics = ({ videoId, userId }) => {
       if (response.data && response.data.success) {
         setAnalytics(response.data);
 
-        // Look for problematic sections
         if (response.data.interactionSummary.problematic_sections) {
-          // Fetch resources for these sections
           await fetchSectionResources(
             videoId,
             response.data.interactionSummary.problematic_sections
@@ -135,10 +126,8 @@ const LearningAnalytics = ({ videoId, userId }) => {
     }
   };
 
-  // Fetch resources for problematic sections
   const fetchSectionResources = async (videoId, sections) => {
     try {
-      // Collect unique section timeframes
       const sectionPromises = sections.map((section) => {
         return axios.get(
           `http://localhost:5000/api/videos/resources/video/${videoId}`
@@ -147,7 +136,6 @@ const LearningAnalytics = ({ videoId, userId }) => {
 
       const results = await Promise.all(sectionPromises);
 
-      // Combine and filter resources
       let allResources = [];
       results.forEach((result) => {
         if (result.data && Array.isArray(result.data)) {
@@ -155,11 +143,9 @@ const LearningAnalytics = ({ videoId, userId }) => {
         }
       });
 
-      // Filter for section-specific resources
       const filteredResources = allResources.filter((resource) => {
         if (!resource.sectionStart && !resource.sectionEnd) return true;
 
-        // Check if resource applies to any problematic section
         return sections.some((section) => {
           return (
             resource.sectionStart <= section.endTime &&
@@ -168,7 +154,6 @@ const LearningAnalytics = ({ videoId, userId }) => {
         });
       });
 
-      // Remove duplicates
       const uniqueResources = filteredResources.reduce((acc, current) => {
         const isDuplicate = acc.some((item) => item._id === current._id);
         if (!isDuplicate) {
@@ -183,7 +168,6 @@ const LearningAnalytics = ({ videoId, userId }) => {
     }
   };
 
-  // Helper to format time (seconds to MM:SS)
   const formatTime = (seconds) => {
     if (!seconds && seconds !== 0) return "--:--";
     const minutes = Math.floor(seconds / 60);
@@ -191,7 +175,6 @@ const LearningAnalytics = ({ videoId, userId }) => {
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Jump to a specific timestamp in the video
   const jumpToTimestamp = (seconds) => {
     const videoElement = document.querySelector("video");
     if (videoElement) {
@@ -200,16 +183,13 @@ const LearningAnalytics = ({ videoId, userId }) => {
     }
   };
 
-  // Open a resource URL
   const openResource = (resource) => {
     if (resource.type === "link" && resource.url) {
       window.open(resource.url, "_blank");
     } else if (resource.type === "pdf" && resource.filePath) {
-      // Extract the filename from the filepath
       const filename = resource.filePath.split("\\").pop().split("/").pop();
       window.open(`http://localhost:5000/uploads/pdfs/${filename}`, "_blank");
     } else if (resource.type === "text" && resource.content) {
-      // Show text content in a modal or expand it in the UI
       alert(resource.content);
     }
   };
@@ -228,12 +208,10 @@ const LearningAnalytics = ({ videoId, userId }) => {
     }
   };
 
-  // Get difficulty color scheme
   const getDifficultyColorScheme = (isDifficult) => {
     return isDifficult ? "red" : "green";
   };
 
-  // Get confidence level display
   const getConfidenceDisplay = (confidence) => {
     const confidencePercent = Math.round(confidence * 100);
 

@@ -1,16 +1,10 @@
-// difficultyDetectionService.js
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 
-/**
- * Service for detecting user difficulty based on video interactions
- * Interfaces with the Python difficulty detection model
- */
 class DifficultyDetectionService {
   constructor() {
-    // Use absolute paths to avoid any directory issues
     this.modelPath = path.resolve(
       __dirname,
       "../models/ml-models/random_forest_model.pkl"
@@ -25,7 +19,6 @@ class DifficultyDetectionService {
     console.log(`Python path: ${this.pythonPath}`);
     console.log(`Temp directory: ${this.tempDir}`);
 
-    // Ensure temp directory exists
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
@@ -39,16 +32,13 @@ class DifficultyDetectionService {
    */
   async detectDifficulty(interactionData) {
     try {
-      // Create sanitized data with exact feature order from model
       const sanitizedData = this._sanitizeData(interactionData);
 
       console.log("Sending to model:", sanitizedData);
 
-      // Call Python model to predict difficulty
       try {
         const prediction = await this._callPythonModel(sanitizedData);
 
-        // Generate insights based on the prediction
         const insights = this.generateInsights(prediction, sanitizedData);
 
         return {
@@ -60,7 +50,6 @@ class DifficultyDetectionService {
       } catch (modelError) {
         console.error("Model prediction error:", modelError);
 
-        // Create a fallback prediction when the model fails
         const fallbackPrediction = {
           predicted_difficulty: 0,
           confidence: 0.5,
@@ -97,7 +86,6 @@ class DifficultyDetectionService {
    * @returns {Object} - Clean, structured data for model
    */
   _sanitizeData(interactionData) {
-    // Use the exact feature order expected by the model
     const expectedFeatures = [
       "session_duration",
       "total_pauses",
@@ -112,7 +100,6 @@ class DifficultyDetectionService {
       "replay_ratio",
     ];
 
-    // Create a sample with realistic defaults
     const sampleData = {
       session_duration: 300, // 5 minutes in seconds
       total_pauses: 0,
@@ -127,36 +114,28 @@ class DifficultyDetectionService {
       replay_ratio: 0,
     };
 
-    // Start with sample defaults
     const cleanData = { ...sampleData };
 
-    // Override with valid values from interaction data
     for (const feature of expectedFeatures) {
       if (interactionData[feature] !== undefined) {
-        // Ensure numeric values
         let value = Number(interactionData[feature]);
 
-        // Handle NaN, Infinity, etc.
         if (!Number.isFinite(value)) {
-          value = sampleData[feature]; // use default if invalid
+          value = sampleData[feature];
         }
 
         cleanData[feature] = value;
       }
     }
 
-    // Ensure derived values are reasonable
-    // Fix session_duration (ensure at least 1 second)
     cleanData.session_duration = Math.max(cleanData.session_duration, 1);
 
-    // Fix pause_rate (max 60 pauses per minute)
     const minutes = cleanData.session_duration / 60;
     cleanData.pause_rate = Math.min(
       cleanData.total_pauses / Math.max(minutes, 0.1),
       60
     );
 
-    // Fix replay_ratio (0 to 1 range)
     cleanData.replay_ratio = Math.min(
       cleanData.replay_duration / Math.max(cleanData.session_duration, 1),
       1
@@ -173,25 +152,20 @@ class DifficultyDetectionService {
    */
   async _callPythonModel(processedData) {
     return new Promise((resolve, reject) => {
-      // Create unique file names for this request
       const requestId = uuidv4();
       const inputFile = path.join(this.tempDir, `input_${requestId}.json`);
 
       try {
-        // Write input data to file
         fs.writeFileSync(inputFile, JSON.stringify(processedData));
 
-        // Use the simple prediction script
         const pythonScript = path.resolve(
           __dirname,
-          "../utils/simple_predict.py"
+          "../utils/difficulty_detector_model.py"
         );
 
-        // Log the command that will be executed
         const pythonCommand = `python ${pythonScript} ${this.modelPath} ${inputFile}`;
         console.log(`Executing Python command: ${pythonCommand}`);
 
-        // Spawn Python process
         const pythonProcess = spawn("python", [
           pythonScript,
           this.modelPath,
@@ -201,7 +175,6 @@ class DifficultyDetectionService {
         let errorOutput = "";
         let stdOutput = "";
 
-        // Set a timeout to kill the process if it takes too long
         const timeout = setTimeout(() => {
           try {
             pythonProcess.kill();
@@ -211,24 +184,19 @@ class DifficultyDetectionService {
           }
         }, 10000); // 10 second timeout
 
-        // Collect standard output
         pythonProcess.stdout.on("data", (data) => {
           stdOutput += data.toString();
           console.log(`Python stdout: ${data.toString()}`);
         });
 
-        // Collect error output
         pythonProcess.stderr.on("data", (data) => {
           errorOutput += data.toString();
           console.error(`Python stderr: ${data.toString()}`);
         });
 
-        // Handle process completion
         pythonProcess.on("close", (code) => {
-          // Clear the timeout
           clearTimeout(timeout);
 
-          // Cleanup input file
           try {
             if (fs.existsSync(inputFile)) {
               fs.unlinkSync(inputFile);
@@ -238,12 +206,10 @@ class DifficultyDetectionService {
           }
 
           if (code !== 0) {
-            // Handle process failure with a fallback prediction
             console.error(
               `Python process failed with code ${code}: ${errorOutput}`
             );
 
-            // Check if we can still extract JSON from stdout
             try {
               const jsonStartIndex = stdOutput.indexOf("{");
               const jsonEndIndex = stdOutput.lastIndexOf("}") + 1;
@@ -264,7 +230,6 @@ class DifficultyDetectionService {
               );
             }
 
-            // Return a fallback prediction
             resolve({
               predicted_difficulty: 0,
               confidence: 0.5,
@@ -274,12 +239,10 @@ class DifficultyDetectionService {
           }
 
           try {
-            // Process normal successful output
             if (!stdOutput.trim()) {
               throw new Error("Empty output from Python script");
             }
 
-            // Extract JSON from stdout (ignoring any debug logs)
             const jsonStartIndex = stdOutput.indexOf("{");
             const jsonEndIndex = stdOutput.lastIndexOf("}") + 1;
 
@@ -295,7 +258,6 @@ class DifficultyDetectionService {
           } catch (error) {
             console.error("Error processing Python output:", error);
 
-            // Return a fallback prediction
             resolve({
               predicted_difficulty: 0,
               confidence: 0.5,
@@ -304,7 +266,6 @@ class DifficultyDetectionService {
           }
         });
       } catch (error) {
-        // Clean up file if it exists
         try {
           if (fs.existsSync(inputFile)) {
             fs.unlinkSync(inputFile);
@@ -327,16 +288,12 @@ class DifficultyDetectionService {
    */
   async updateModel(interactionData, reportedDifficulty) {
     try {
-      // Sanitize the data first
       const sanitizedData = this._sanitizeData(interactionData);
 
-      // Add the user-reported difficulty
       sanitizedData.reported_difficulty = reportedDifficulty;
 
-      // For now, log that we would update the model but don't actually call Python
       console.log("Model would be updated with:", sanitizedData);
 
-      // Return success - in a production environment, you would call the Python script
       return {
         success: true,
         message: "Model update logged (actual update disabled for testing)",
@@ -364,19 +321,15 @@ class DifficultyDetectionService {
     const isDifficult = prediction.predicted_difficulty === 1;
     const confidence = prediction.confidence || 0.5;
 
-    // Calculate engagement score (0-100)
     const engagementScore = this._calculateEngagementScore(interactionData);
 
-    // Determine difficulty level match if user reported difficulty
     const difficultyMatch =
       reportedDifficulty !== null
         ? prediction.predicted_difficulty === reportedDifficulty
         : null;
 
-    // Extract specific insights from prediction
     const modelInsights = prediction.insights || [];
 
-    // Get appropriate learning recommendations
     const recommendations = this._generateRecommendations(
       isDifficult,
       confidence,
@@ -427,20 +380,15 @@ class DifficultyDetectionService {
       skipped_content = 0,
     } = interactionData;
 
-    // Base score from session duration (max 50 points for 10+ minutes)
     const durationScore = Math.min(session_duration / 12, 50);
 
-    // Replay score (active engagement through review)
     const replayScore = Math.min(replay_frequency * 5, 20);
 
-    // Penalty for excessive skipping (disengagement)
     const skipPenalty = Math.min(skipped_content / 30, 20);
 
-    // Pause score (some pauses show engagement, too many suggest difficulty)
     const pauseScore = total_pauses > 0 ? Math.min(10, total_pauses * 2) : 0;
     const pausePenalty = Math.max(0, (total_pauses - 5) * 2);
 
-    // Calculate final score (capped between 0-100)
     return Math.max(
       0,
       Math.min(
@@ -482,12 +430,10 @@ class DifficultyDetectionService {
     const recommendations = [];
 
     if (isDifficult) {
-      // Recommendations for content perceived as difficult
       recommendations.push(
         "Consider reviewing prerequisite content before continuing"
       );
 
-      // Check specific interaction patterns
       if (interactionData.total_pauses > 5) {
         recommendations.push(
           "Try taking notes during pauses to reinforce your understanding"
@@ -510,7 +456,6 @@ class DifficultyDetectionService {
         );
       }
 
-      // Add recommendations based on top contributing factors
       if (topFactors && Array.isArray(topFactors)) {
         for (const factor of topFactors) {
           if (
@@ -530,9 +475,7 @@ class DifficultyDetectionService {
         }
       }
     } else {
-      // Recommendations for content not perceived as difficult
       if (interactionData.session_duration > 900) {
-        // Over 15 minutes
         recommendations.push(
           "You seem to have a good grasp of this topic. Consider exploring related advanced content"
         );
@@ -560,7 +503,6 @@ class DifficultyDetectionService {
       }
     }
 
-    // If we don't have many recommendations, add a general one
     if (recommendations.length < 2) {
       recommendations.push(
         isDifficult
@@ -569,7 +511,6 @@ class DifficultyDetectionService {
       );
     }
 
-    // Limit to 3 most relevant recommendations
     return recommendations.slice(0, 3);
   }
 }

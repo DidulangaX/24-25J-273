@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api from "../services/api";
 
-/**
- * Hook for difficulty detection and feedback
- * Integrates with the ML model through the backend API
- */
 const useDifficultyDetection = (videoId, interactionData) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,9 +11,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
   const [learningInsights, setLearningInsights] = useState(null);
   const [confidenceLevel, setConfidenceLevel] = useState(0);
 
-  /**
-   * Get difficulty prediction from the backend model
-   */
   const predictDifficulty = useCallback(async () => {
     if (!interactionData || !videoId) return;
 
@@ -25,7 +18,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
       setIsLoading(true);
       setError(null);
 
-      // Ensure we have all required features in the right format
       const modelData = prepareModelInput(interactionData);
 
       const response = await api.post(`/videos/detect-difficulty/${videoId}`, {
@@ -37,7 +29,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
         setPrediction(response.data.prediction);
         setConfidenceLevel(response.data.prediction.confidence * 100);
 
-        // If model is very confident about difficulty, proactively show recommendations
         if (
           response.data.prediction.predicted_difficulty === 1 &&
           response.data.prediction.confidence > 0.7
@@ -61,7 +52,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
    * @returns {Object} - Formatted data for the model
    */
   const prepareModelInput = (data) => {
-    // Ensure all required features are available
     const modelInput = {
       session_duration: data.sessionDuration || data.session_duration || 0,
       total_pauses: data.totalPauses || data.total_pauses || 0,
@@ -90,10 +80,8 @@ const useDifficultyDetection = (videoId, interactionData) => {
     const sessionDuration = data.sessionDuration || data.session_duration || 0;
     const totalPauses = data.totalPauses || data.total_pauses || 0;
 
-    // Calculate minutes, ensure we don't divide by zero
     const minutes = Math.max(sessionDuration / 60, 0.1);
 
-    // Calculate pause rate with sensible limit
     return Math.min(totalPauses / minutes, 60);
   };
 
@@ -106,10 +94,8 @@ const useDifficultyDetection = (videoId, interactionData) => {
     const sessionDuration = data.sessionDuration || data.session_duration || 0;
     const replayDuration = data.replayDuration || data.replay_duration || 0;
 
-    // Ensure we don't divide by zero
     if (sessionDuration <= 0) return 0;
 
-    // Calculate ratio with sensible limit (0-1)
     return Math.min(replayDuration / sessionDuration, 1);
   };
 
@@ -125,10 +111,8 @@ const useDifficultyDetection = (videoId, interactionData) => {
         setIsLoading(true);
         setError(null);
 
-        // Convert string difficulty to numeric for the model
         const difficultyValue = difficulty === "difficult" ? 1 : 0;
 
-        // Prepare model input
         const modelData = prepareModelInput(interactionData);
 
         const response = await api.post(`/videos/difficulty-feedback`, {
@@ -141,11 +125,9 @@ const useDifficultyDetection = (videoId, interactionData) => {
         setUserFeedback(difficulty);
         setShowFeedbackPrompt(false);
 
-        // Get recommendations based on the feedback
         if (response.data && response.data.recommendations) {
           setRecommendations(response.data.recommendations);
         } else {
-          // Fallback to getting recommendations directly
           getStandardRecommendations(difficulty);
         }
       } catch (err) {
@@ -180,9 +162,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
     }
   };
 
-  /**
-   * Get model-based recommendations
-   */
   const getModelRecommendations = async () => {
     try {
       setIsLoading(true);
@@ -206,9 +185,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
     }
   };
 
-  /**
-   * Generate learning insights report
-   */
   const generateInsights = useCallback(async () => {
     if (!videoId || !interactionData) return null;
 
@@ -244,14 +220,9 @@ const useDifficultyDetection = (videoId, interactionData) => {
     }
   }, [videoId, interactionData, userFeedback]);
 
-  /**
-   * Check if feedback prompt should be shown
-   * Shows prompt after significant interaction
-   */
   useEffect(() => {
     if (!interactionData) return;
 
-    // Calculate total interactions and session indicators
     const totalPauses =
       interactionData.totalPauses || interactionData.total_pauses || 0;
     const replayEvents =
@@ -263,7 +234,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
     const sessionDuration =
       interactionData.sessionDuration || interactionData.session_duration || 0;
 
-    // Show feedback prompt after significant interaction (based on research insights)
     const shouldPrompt =
       totalPauses > 3 ||
       replayEvents > 2 ||
@@ -273,7 +243,6 @@ const useDifficultyDetection = (videoId, interactionData) => {
     if (shouldPrompt && !showFeedbackPrompt && !userFeedback) {
       setShowFeedbackPrompt(true);
 
-      // Also get a prediction at this point
       predictDifficulty();
     }
   }, [interactionData, userFeedback, showFeedbackPrompt, predictDifficulty]);

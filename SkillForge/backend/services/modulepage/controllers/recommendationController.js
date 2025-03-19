@@ -5,10 +5,6 @@ const Resource = require("../models/Resource");
 const UserProfile = require("../models/UserProfile");
 const UserInteraction = require("../models/UserInteraction");
 
-/**
- * Get personalized recommendations based on user feedback and learning patterns
- * This is a sophisticated algorithm that tailors content based on difficulty feedback
- */
 exports.getPersonalizedRecommendations = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   const { userId, difficulty } = req.body;
@@ -21,7 +17,6 @@ exports.getPersonalizedRecommendations = asyncHandler(async (req, res) => {
   }
 
   try {
-    // 1. Get the current video details
     const currentVideo = await Video.findById(videoId);
     if (!currentVideo) {
       return res.status(404).json({
@@ -30,10 +25,8 @@ exports.getPersonalizedRecommendations = asyncHandler(async (req, res) => {
       });
     }
 
-    // 2. Get user profile to understand their learning history
     let userProfile = await UserProfile.findOne({ userId });
     if (!userProfile) {
-      // Create a new profile if one doesn't exist
       userProfile = await UserProfile.create({
         userId,
         learningHistory: [],
@@ -46,7 +39,6 @@ exports.getPersonalizedRecommendations = asyncHandler(async (req, res) => {
       });
     }
 
-    // 3. Determine next steps based on difficulty feedback
     let nextSteps;
     if (difficulty === "difficult") {
       nextSteps = await getPathForDifficultContent(currentVideo, userProfile);
@@ -56,10 +48,8 @@ exports.getPersonalizedRecommendations = asyncHandler(async (req, res) => {
       nextSteps = await getPathForJustRightContent(currentVideo, userProfile);
     }
 
-    // 4. Update user's learning history
     await updateLearningHistory(userProfile, currentVideo, difficulty);
 
-    // 5. Return personalized recommendations
     res.status(200).json({
       success: true,
       difficulty,
@@ -75,17 +65,7 @@ exports.getPersonalizedRecommendations = asyncHandler(async (req, res) => {
   }
 });
 
-/**
- * Get recommendations for users who found content difficult
- * Focus on providing fundamental resources and easier content
- */
 async function getPathForDifficultContent(currentVideo, userProfile) {
-  // For users struggling with content, provide:
-  // 1. Simpler prerequisite videos
-  // 2. Fundamentals resources
-  // 3. More step-by-step guided content
-
-  // Get easier videos in the same category
   const easierVideos = await Video.find({
     category: currentVideo.category,
     difficultyLevel: "beginner",
@@ -93,7 +73,6 @@ async function getPathForDifficultContent(currentVideo, userProfile) {
     level: { $lt: currentVideo.level || 3 },
   }).limit(3);
 
-  // Get explanatory resources tagged as "easy"
   const supportResources = await Resource.find({
     recommendedFor: "easy",
     $or: [
@@ -102,13 +81,11 @@ async function getPathForDifficultContent(currentVideo, userProfile) {
     ],
   }).limit(4);
 
-  // Find foundational videos related to the current topic
   const foundationalVideos = await Video.find({
     tags: { $in: currentVideo.tags || [] },
     difficultyLevel: "beginner",
   }).limit(2);
 
-  // Craft a custom learning path focusing on fundamentals
   const learningPath = [
     ...easierVideos.map(formatVideoForResponse),
     ...foundationalVideos
@@ -117,7 +94,7 @@ async function getPathForDifficultContent(currentVideo, userProfile) {
           !easierVideos.some((ev) => ev._id.toString() === v._id.toString())
       )
       .map(formatVideoForResponse),
-  ].slice(0, 3); // Ensure we have at most 3 videos
+  ].slice(0, 3);
 
   return {
     nextVideo:
@@ -134,17 +111,7 @@ async function getPathForDifficultContent(currentVideo, userProfile) {
   };
 }
 
-/**
- * Get recommendations for users who found content easy
- * Focus on providing more advanced and challenging content
- */
 async function getPathForEasyContent(currentVideo, userProfile) {
-  // For users who find content easy, provide:
-  // 1. More advanced videos
-  // 2. Challenge resources
-  // 3. Practical application opportunities
-
-  // Get more advanced videos in the same category
   const advancedVideos = await Video.find({
     category: currentVideo.category,
     $or: [
@@ -157,7 +124,6 @@ async function getPathForEasyContent(currentVideo, userProfile) {
     _id: { $ne: currentVideo._id },
   }).limit(3);
 
-  // Get advanced resources
   const challengeResources = await Resource.find({
     $or: [{ recommendedFor: "difficult" }, { recommendedFor: "justright" }],
     $or: [
@@ -166,13 +132,11 @@ async function getPathForEasyContent(currentVideo, userProfile) {
     ],
   }).limit(4);
 
-  // Find related advanced topics
   const relatedAdvancedVideos = await Video.find({
     tags: { $in: currentVideo.tags || [] },
     difficultyLevel: "advanced",
   }).limit(2);
 
-  // Craft a custom learning path focusing on advanced topics
   const learningPath = [
     ...advancedVideos.map(formatVideoForResponse),
     ...relatedAdvancedVideos
@@ -181,7 +145,7 @@ async function getPathForEasyContent(currentVideo, userProfile) {
           !advancedVideos.some((av) => av._id.toString() === v._id.toString())
       )
       .map(formatVideoForResponse),
-  ].slice(0, 3); // Ensure we have at most 3 videos
+  ].slice(0, 3);
 
   return {
     nextVideo:
@@ -200,17 +164,7 @@ async function getPathForEasyContent(currentVideo, userProfile) {
   };
 }
 
-/**
- * Get recommendations for users who found content just right
- * Focus on providing balanced content that builds on current knowledge
- */
 async function getPathForJustRightContent(currentVideo, userProfile) {
-  // For users who find content at the right level, provide:
-  // 1. Natural next-step videos
-  // 2. Complementary resources
-  // 3. Well-balanced learning path
-
-  // Get videos that are the next logical steps
   const nextStepVideos = await Video.find({
     $or: [
       {
@@ -230,7 +184,6 @@ async function getPathForJustRightContent(currentVideo, userProfile) {
     .limit(3)
     .sort({ sequencePosition: 1, level: 1 });
 
-  // Get appropriate resources
   const complementaryResources = await Resource.find({
     recommendedFor: "justright",
     $or: [
@@ -239,13 +192,11 @@ async function getPathForJustRightContent(currentVideo, userProfile) {
     ],
   }).limit(4);
 
-  // Find related videos at appropriate difficulty
   const relatedVideos = await Video.find({
     tags: { $in: currentVideo.tags || [] },
     difficultyLevel: currentVideo.difficultyLevel || "intermediate",
   }).limit(2);
 
-  // Craft a balanced learning path
   const learningPath = [
     ...nextStepVideos.map(formatVideoForResponse),
     ...relatedVideos
@@ -254,7 +205,7 @@ async function getPathForJustRightContent(currentVideo, userProfile) {
           !nextStepVideos.some((nv) => nv._id.toString() === v._id.toString())
       )
       .map(formatVideoForResponse),
-  ].slice(0, 3); // Ensure we have at most 3 videos
+  ].slice(0, 3);
 
   return {
     nextVideo:
@@ -273,11 +224,7 @@ async function getPathForJustRightContent(currentVideo, userProfile) {
   };
 }
 
-/**
- * Update user's learning history with the current video
- */
 async function updateLearningHistory(userProfile, video, difficulty) {
-  // Add video to learning history if not already present
   const existingEntry = userProfile.learningHistory.find(
     (entry) => entry.videoId.toString() === video._id.toString()
   );
@@ -298,12 +245,10 @@ async function updateLearningHistory(userProfile, video, difficulty) {
       },
     });
   } else {
-    // Update existing entry
     existingEntry.difficulty = difficulty;
     existingEntry.watchDate = new Date();
   }
 
-  // Update skill levels based on tags
   if (video.tags && video.tags.length > 0) {
     video.tags.forEach((tag) => {
       const currentSkill = userProfile.skillLevels.get(tag) || {
@@ -312,7 +257,6 @@ async function updateLearningHistory(userProfile, video, difficulty) {
         lastUpdated: new Date(),
       };
 
-      // Adjust skill level based on difficulty feedback
       if (difficulty === "easy") {
         currentSkill.level = Math.min(5, currentSkill.level + 0.5);
         currentSkill.confidence = Math.min(1.0, currentSkill.confidence + 0.1);
@@ -331,9 +275,6 @@ async function updateLearningHistory(userProfile, video, difficulty) {
   await userProfile.save();
 }
 
-/**
- * Format a video object for response
- */
 function formatVideoForResponse(video) {
   return {
     _id: video._id,
@@ -349,9 +290,6 @@ function formatVideoForResponse(video) {
   };
 }
 
-/**
- * Format a resource object for response
- */
 function formatResourceForResponse(resource) {
   let resourceUrl = "";
 
@@ -375,10 +313,6 @@ function formatResourceForResponse(resource) {
   };
 }
 
-/**
- * Submit feedback and get personalized recommendations
- * Enhanced to provide more targeted recommendations
- */
 exports.submitFeedbackAndGetRecommendations = asyncHandler(async (req, res) => {
   const { videoId, userId, perceivedDifficulty, comments, interactionData } =
     req.body;
@@ -391,7 +325,6 @@ exports.submitFeedbackAndGetRecommendations = asyncHandler(async (req, res) => {
   }
 
   try {
-    // 1. Store the feedback in database
     let userInteraction = await UserInteraction.findOne({ userId, videoId });
 
     if (userInteraction) {
@@ -408,7 +341,6 @@ exports.submitFeedbackAndGetRecommendations = asyncHandler(async (req, res) => {
       });
     }
 
-    // 2. Get personalized recommendations
     const recommendationsRequest = {
       params: { videoId },
       body: { userId, difficulty: perceivedDifficulty },
