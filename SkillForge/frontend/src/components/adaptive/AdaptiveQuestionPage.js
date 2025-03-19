@@ -1,19 +1,22 @@
 // File: src/components/adaptive/AdaptiveQuestionPage.js
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import RoundSummary from "./RoundSummary"; // <-- import the new component
 import "./AdaptiveQuestionPage.css";
 
 function AdaptiveQuestionPage({ userId }) {
   const [question, setQuestion] = useState(null);
   const [userAnswer, setUserAnswer] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [feedbackType, setFeedbackType] = useState("neutral"); // neutral, success, error
+  const [feedbackType, setFeedbackType] = useState("neutral"); // success/error/neutral
   const [loading, setLoading] = useState(false);
+
+  // NEW: hold the round summary in state if the round completes
+  const [roundSummary, setRoundSummary] = useState(null);
+  // If final challenge is done, we might store a "challengeComplete" boolean or final summary.
 
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Extract attemptNumber from location.state (if present)
   const [attemptNumber] = useState(location.state?.attemptNumber || null);
 
   useEffect(() => {
@@ -25,19 +28,48 @@ function AdaptiveQuestionPage({ userId }) {
 
   const fetchCurrentQuestion = async () => {
     setLoading(true);
+    setRoundSummary(null); // Clear any prior summary, in case we're continuing
+    setFeedback("");
     try {
       const response = await fetch(
         `http://localhost:8051/api/adaptive/currentQuestion?user_id=${userId}`
       );
       const data = await response.json();
-      if (data.message) {
-        // Could be "Session is finished." or "No active session."
+
+      if (data.status === "no_active_session") {
+        // no active session => user must start new attempt or is finished
         setQuestion(null);
-        setFeedback(data.message);
+        setFeedback(data.message || "No active session");
         setFeedbackType("neutral");
-      } else if (data.question_id) {
+      } 
+      else if (data.status === "finished") {
+        // The user is done with all rounds
+        setQuestion(null);
+        setFeedback("Session is already finished.");
+        setFeedbackType("neutral");
+        // optionally navigate to final summary
+        if (attemptNumber) {
+          navigate(`/attemptSummary/${attemptNumber}`);
+        }
+      }
+      else if (data.status === "round_completed") {
+        // The backend says the round is already completed => it also returns summary
+        if (data.summary) {
+          setRoundSummary(data.summary);
+        }
+        setQuestion(null);
+        setFeedbackType("neutral");
+      }
+      else if (data.status === "question") {
+        // We have an active question
         setQuestion(data);
         setFeedback("");
+      }
+      else {
+        // fallback
+        setQuestion(null);
+        setFeedback(data.message || "Unknown status from server.");
+        setFeedbackType("neutral");
       }
     } catch (error) {
       console.error("Error fetching question:", error);
@@ -55,7 +87,6 @@ function AdaptiveQuestionPage({ userId }) {
     }
 
     setLoading(true);
-
     const payload = {
       user_id: userId,
       question_id: question.question_id,
@@ -63,21 +94,19 @@ function AdaptiveQuestionPage({ userId }) {
     };
 
     try {
-      const response = await fetch(
-        "http://localhost:8051/api/adaptive/answer",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch("http://localhost:8051/api/adaptive/answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const data = await response.json();
 
+      // Show classification feedback
       if (data.classification) {
-        const classification = data.classification.toLowerCase();
         setFeedback(`Classification: ${data.classification}`);
+        const classification = data.classification.toLowerCase();
         setFeedbackType(
-          classification.includes("correct")
+          classification.includes("correct") 
             ? "success"
             : classification.includes("incorrect")
             ? "error"
@@ -85,26 +114,54 @@ function AdaptiveQuestionPage({ userId }) {
         );
       }
 
-      // if there's a next question
-      if (data.next_question && data.next_question.question_id) {
-        setQuestion(data.next_question);
-        setUserAnswer("");
-      }
-      // if the server says no further questions or session finished
-      else if (data.next_question && data.next_question.message) {
+      // Check the "status" the backend sends
+      if (data.status === "time_limit_exceeded") {
+        // Round automatically completed, so we'll just fetch next
         setQuestion(null);
-        setFeedback(data.next_question.message);
+        setFeedback(data.message || "Time limit exceeded.");
         setFeedbackType("neutral");
-
-        // If the message indicates "Session is finished", auto-navigate to final summary
-        if (data.next_question.message.toLowerCase().includes("finished")) {
-          // If we don't know attemptNumber, we can just go to /myAttempts
-          // But if we have attemptNumber, we can direct user to final summary
-          if (attemptNumber) {
-            navigate(`/attemptSummary/${attemptNumber}`);
-          } else {
-            navigate("/myAttempts");
-          }
+        // Possibly the backend calls moveToNextPhase => we can refetch
+        fetchCurrentQuestion();
+      }
+      else if (data.status === "round_complete") {
+        // The round just ended. The response includes a "summary" object
+        if (data.summary) {
+          setRoundSummary(data.summary);
+        }
+        setQuestion(null);
+        setFeedback(data.message || "Round complete");
+        setFeedbackType("neutral");
+      }
+      else if (data.status === "challenge_complete") {
+        // All 3 rounds are done
+        setQuestion(null);
+        setFeedback(data.message || "Challenge complete!");
+        setFeedbackType("success");
+        // Optionally navigate to final summary
+        if (attemptNumber) {
+          navigate(`/attemptSummary/${attemptNumber}`, {
+            state: { finalData: data },
+          });
+        } else {
+          navigate("/myAttempts");
+        }
+      }
+      else if (data.status === "answer_submitted") {
+        // user answered a question, we might have "next_question"
+        if (data.next_question && data.next_question.question_id) {
+          setQuestion(data.next_question);
+        } else {
+          // no more questions => possibly fetchCurrentQuestion again
+          fetchCurrentQuestion();
+        }
+      }
+      else {
+        // fallback
+        // e.g. data.status might be something else
+        if (data.next_question && data.next_question.question_id) {
+          setQuestion(data.next_question);
+        } else {
+          setQuestion(null);
         }
       }
     } catch (error) {
@@ -112,20 +169,25 @@ function AdaptiveQuestionPage({ userId }) {
       setFeedback("Error submitting answer.");
       setFeedbackType("error");
     }
-
+    setUserAnswer("");
     setLoading(false);
   };
 
-  const handleViewSummary = () => {
-    // fallback button: user manually goes to MyAttempts
-    // or attemptNumber => final summary
-    if (attemptNumber) {
-      navigate(`/attemptSummary/${attemptNumber}`);
-    } else {
-      navigate("/myAttempts");
-    }
+  // -------------- HANDLERS for RoundSummary --------------
+  const handleContinue = () => {
+    // The user passed => proceed to the next round by calling fetchCurrentQuestion again
+    setRoundSummary(null);
+    fetchCurrentQuestion();
   };
 
+  const handleRetry = () => {
+    // The user failed => same logic, call fetchCurrentQuestion 
+    // (the backend will create a new attempt for the same round)
+    setRoundSummary(null);
+    fetchCurrentQuestion();
+  };
+
+  // -------------- RENDERING LOGIC --------------
   if (loading) {
     return (
       <div className="adaptive-question-container">
@@ -134,13 +196,26 @@ function AdaptiveQuestionPage({ userId }) {
         </div>
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <p className="loading-text">Loading your question...</p>
+          <p className="loading-text">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // if no question is currently available or session is done
+  // 1) If we have a round summary to show, display it instead of question form
+  if (roundSummary) {
+    return (
+      <div className="adaptive-question-container">
+        <RoundSummary 
+          summary={roundSummary} 
+          onContinue={handleContinue} 
+          onRetry={handleRetry}
+        />
+      </div>
+    );
+  }
+
+  // 2) If no question is available (e.g., session finished or error)
   if (!question) {
     return (
       <div className="adaptive-question-container">
@@ -152,7 +227,16 @@ function AdaptiveQuestionPage({ userId }) {
           <p className="empty-state-message">
             {feedback || "No question available at the moment."}
           </p>
-          <button onClick={handleViewSummary} className="summary-button">
+          <button
+            onClick={() => {
+              if (attemptNumber) {
+                navigate(`/attemptSummary/${attemptNumber}`);
+              } else {
+                navigate("/myAttempts");
+              }
+            }}
+            className="summary-button"
+          >
             Go to My Attempts / Summary
           </button>
         </div>
@@ -160,7 +244,7 @@ function AdaptiveQuestionPage({ userId }) {
     );
   }
 
-  // otherwise, display the question prompt
+  // 3) Otherwise, show the active question
   return (
     <div className="adaptive-question-container">
       <div className="question-header">
@@ -170,24 +254,7 @@ function AdaptiveQuestionPage({ userId }) {
         </p>
       </div>
 
-      {/* Optional Progress Bar - Uncomment if you track progress */}
-      {/*
-      <div className="progress-container">
-        <div className="progress-bar-container">
-          <div className="progress-bar" style={{ width: '40%' }}></div>
-        </div>
-        <div className="progress-info">
-          <span>Question 4 of 10</span>
-          <span>40% Complete</span>
-        </div>
-      </div>
-      */}
-
       <div className="question-block">
-        {/* Optional Difficulty Badge - Uncomment if you want to show difficulty */}
-        {/*
-        <span className="difficulty-badge difficulty-medium">Medium</span>
-        */}
         <span className="prompt-label">Question Prompt</span>
         <p className="question-prompt">{question.prompt}</p>
       </div>
@@ -214,7 +281,7 @@ function AdaptiveQuestionPage({ userId }) {
         <div className={`feedback feedback-${feedbackType}`}>{feedback}</div>
       )}
     </div>
-  );
+  );6
 }
 
 export default AdaptiveQuestionPage;

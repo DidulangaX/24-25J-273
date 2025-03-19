@@ -1,4 +1,3 @@
-// File: SkillForge/backend/services/adaptive/models/TestSessionModel.js
 
 const mongoose = require('mongoose');
 
@@ -8,7 +7,9 @@ const RoundQuestionSchema = new mongoose.Schema({
   correct: { type: Boolean, default: false },
   done: { type: Boolean, default: false },
   startTime: { type: Date, default: null },
-  endTime: { type: Date, default: null }
+  endTime: { type: Date, default: null },
+  topic: { type: String, required: true },
+  difficulty: { type: String, required: true }
 }, { _id: false });
 
 const RoundSchema = new mongoose.Schema({
@@ -16,18 +17,73 @@ const RoundSchema = new mongoose.Schema({
   questions: [RoundQuestionSchema],
   completed: { type: Boolean, default: false },
   startTime: { type: Date, default: null },
-  timeLimit: { type: Number, default: 600 }  // seconds
+  endTime: { type: Date, default: null },
+  timeLimit: { type: Number, default: 600 },  // seconds
+  minPassingScore: { type: Number, default: 60 }, // minimum score needed to pass
+  score: { type: Number, default: 0 },
+  passed: { type: Boolean, default: false }
+}, { _id: false });
+
+const RoundSummarySchema = new mongoose.Schema({
+  roundNumber: Number,
+  score: Number,
+  correctAnswers: Number,
+  totalQuestions: Number,
+  timeSpent: Number, // in seconds
+  topicPerformance: {
+    type: Map,
+    of: {
+      correct: Number,
+      total: Number,
+      percentage: Number
+    }
+  },
+  difficultyPerformance: {
+    type: Map,
+    of: {
+      correct: Number,
+      total: Number,
+      percentage: Number
+    }
+  },
+  passed: Boolean
 }, { _id: false });
 
 const TestSessionSchema = new mongoose.Schema({
-  user_id: { type: String, required: true },    // e.g. "UserTest123"
-  attemptNumber: { type: Number, default: 1 },  // 1, 2, 3, etc.
-
-  phase: { type: String, default: 'round1' },   // 'round1', 'round2', 'round3', 'finished'
+  user_id: { type: String, required: true },
+  attemptNumber: { type: Number, default: 1 },
+  
+  // Track current state
+  phase: { type: String, default: 'round1' }, // 'round1', 'round2', 'round3', 'finished'
   total_score: { type: Number, default: 0 },
   badge: { type: String, default: '' },
+  
+  // Round configuration
+  roundSettings: {
+    round1: {
+      easyPercentage: { type: Number, default: 70 },
+      mediumPercentage: { type: Number, default: 30 },
+      hardPercentage: { type: Number, default: 0 },
+      timeLimit: { type: Number, default: 900 }, // 15 minutes
+      minPassingScore: { type: Number, default: 60 } // 60%
+    },
+    round2: {
+      easyPercentage: { type: Number, default: 30 },
+      mediumPercentage: { type: Number, default: 50 },
+      hardPercentage: { type: Number, default: 20 },
+      timeLimit: { type: Number, default: 720 }, // 12 minutes
+      minPassingScore: { type: Number, default: 65 } // 65%
+    },
+    round3: {
+      easyPercentage: { type: Number, default: 10 },
+      mediumPercentage: { type: Number, default: 40 },
+      hardPercentage: { type: Number, default: 50 },
+      timeLimit: { type: Number, default: 600 }, // 10 minutes
+      minPassingScore: { type: Number, default: 70 } // 70%
+    }
+  },
 
-  // Mastery maps
+  // Mastery tracking
   topic_mastery: {
     type: Map,
     of: Number,
@@ -42,8 +98,6 @@ const TestSessionSchema = new mongoose.Schema({
       'Streams': 0.5,
       'Multithreading': 0.5,
       'Design Patterns': 0.5
-      
-
     }
   },
   difficulty_mastery: {
@@ -56,9 +110,11 @@ const TestSessionSchema = new mongoose.Schema({
     }
   },
 
+  // Rounds and summaries
   rounds: [RoundSchema],
+  roundSummaries: [RoundSummarySchema],
 
-  // We can store some timestamps
+  // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

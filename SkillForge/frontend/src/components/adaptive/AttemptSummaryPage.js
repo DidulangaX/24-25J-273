@@ -30,7 +30,8 @@ function AttemptSummaryPage({ userId }) {
         // If the session isn't finished yet, display the message.
         setMessage(data.message);
       } else {
-        setSummary(data);
+        // Extract the nested summary object
+        setSummary(data.summary);
       }
     } catch (err) {
       console.error("Error fetching summary:", err);
@@ -82,9 +83,31 @@ function AttemptSummaryPage({ userId }) {
   };
 
   // Get overall mastery percentage across all topics
+  const masteryValues = summary.topic_mastery
+    ? Object.values(summary.topic_mastery)
+    : [];
   const averageMastery =
-    Object.values(summary.topic_mastery).reduce((a, b) => a + b, 0) /
-    Object.values(summary.topic_mastery).length;
+    masteryValues.length > 0
+      ? masteryValues.reduce((a, b) => a + b, 0) / masteryValues.length
+      : 0;
+
+  // ---------------------------
+  // DEDUPLICATE ROUND SUMMARIES
+  // ---------------------------
+  // We only want the *latest* summary for each roundNumber
+  const { roundSummaries = [] } = summary;
+  const uniqueSummaries = [];
+  const seenRounds = new Set();
+
+  // Iterate from the end so we keep the most recent attempt for each round
+  for (let i = roundSummaries.length - 1; i >= 0; i--) {
+    const s = roundSummaries[i];
+    if (!seenRounds.has(s.roundNumber)) {
+      // Insert at front so the final array is in ascending order
+      uniqueSummaries.unshift(s);
+      seenRounds.add(s.roundNumber);
+    }
+  }
 
   return (
     <div className="attempt-summary-container">
@@ -109,7 +132,9 @@ function AttemptSummaryPage({ userId }) {
           <span className="score-label">Overall Mastery</span>
         </div>
         <div className="score-overview-card">
-          <span className="score-value">{summary.rounds.length}</span>
+          <span className="score-value">
+            {uniqueSummaries.length}
+          </span>
           <span className="score-label">Rounds Completed</span>
         </div>
       </div>
@@ -130,8 +155,8 @@ function AttemptSummaryPage({ userId }) {
               </tr>
             </thead>
             <tbody>
-              {summary.rounds.map((r) => {
-                const percentage = (r.correctCount / r.totalQuestions) * 100;
+              {uniqueSummaries.map((r) => {
+                const percentage = (r.correctAnswers / r.totalQuestions) * 100;
                 const performanceClass =
                   percentage >= 80
                     ? "excellent"
@@ -144,7 +169,7 @@ function AttemptSummaryPage({ userId }) {
                 return (
                   <tr key={r.roundNumber} className="round-row">
                     <td className="round-number">{r.roundNumber}</td>
-                    <td className="correct-count">{r.correctCount}</td>
+                    <td className="correct-count">{r.correctAnswers}</td>
                     <td className="total-questions">{r.totalQuestions}</td>
                     <td className="performance">
                       <div className="progress-container">
@@ -171,23 +196,24 @@ function AttemptSummaryPage({ userId }) {
           <span className="icon">🎯</span> Topic Mastery
         </h3>
         <div className="mastery-grid">
-          {Object.entries(summary.topic_mastery).map(([topic, val]) => {
-            const masteryLevel = getMasteryLevel(val);
-            const percentage = (val * 100).toFixed(0);
+          {summary.topic_mastery &&
+            Object.entries(summary.topic_mastery).map(([topic, val]) => {
+              const masteryLevel = getMasteryLevel(val);
+              const percentage = (val * 100).toFixed(0);
 
-            return (
-              <div key={topic} className={`mastery-card ${masteryLevel}`}>
-                <div className="topic-name">{topic}</div>
-                <div className="mastery-meter">
-                  <div
-                    className="mastery-fill"
-                    style={{ width: `${percentage}%` }}
-                  ></div>
+              return (
+                <div key={topic} className={`mastery-card ${masteryLevel}`}>
+                  <div className="topic-name">{topic}</div>
+                  <div className="mastery-meter">
+                    <div
+                      className="mastery-fill"
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                  <div className="mastery-value">{percentage}%</div>
                 </div>
-                <div className="mastery-value">{percentage}%</div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       </div>
 
@@ -199,15 +225,16 @@ function AttemptSummaryPage({ userId }) {
         <div className="recommendation-content">
           <p>Based on your performance, consider focusing on these areas:</p>
           <ul className="recommendation-list">
-            {Object.entries(summary.topic_mastery)
-              .sort((a, b) => a[1] - b[1])
-              .slice(0, 2)
-              .map(([topic, val]) => (
-                <li key={topic}>
-                  Review <strong>{topic}</strong> concepts to improve your
-                  mastery (currently at {(val * 100).toFixed(0)}%)
-                </li>
-              ))}
+            {summary.topic_mastery &&
+              Object.entries(summary.topic_mastery)
+                .sort((a, b) => a[1] - b[1])
+                .slice(0, 2)
+                .map(([topic, val]) => (
+                  <li key={topic}>
+                    Review <strong>{topic}</strong> concepts to improve your
+                    mastery (currently at {(val * 100).toFixed(0)}%)
+                  </li>
+                ))}
             <li>Try another attempt to test your knowledge retention</li>
           </ul>
         </div>

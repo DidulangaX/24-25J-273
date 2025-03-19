@@ -25,11 +25,15 @@ function MyAttemptsPage({ userId }) {
         `http://localhost:8051/api/adaptive/allAttempts?user_id=${userId}`
       );
       const data = await response.json();
-      if (Array.isArray(data)) {
-        setAttempts(data);
-        
-        // Check if there's an active attempt
-        const activeAttempt = data.find(a => a.phase === 'active' || a.phase === 'in_progress');
+
+      // The backend returns an object like: { status: 'success', attempts: [...] }
+      if (data.status === 'success' && Array.isArray(data.attempts)) {
+        setAttempts(data.attempts);
+
+        // Check if there's an active/in_progress attempt
+        const activeAttempt = data.attempts.find(
+          (a) => a.phase === 'active' || a.phase === 'in_progress'
+        );
         if (activeAttempt) {
           setActiveAttemptNumber(activeAttempt.attemptNumber);
         }
@@ -80,8 +84,7 @@ function MyAttemptsPage({ userId }) {
   // Get badge icon based on badge name
   const getBadgeIcon = (badge) => {
     if (!badge) return '🔄';
-    
-    switch(badge.toLowerCase()) {
+    switch (badge.toLowerCase()) {
       case 'bronze': return '🥉';
       case 'silver': return '🥈';
       case 'gold': return '🥇';
@@ -93,12 +96,15 @@ function MyAttemptsPage({ userId }) {
 
   // Get status indicator class based on phase
   const getStatusClass = (phase) => {
-    switch(phase) {
+    switch (phase) {
       case 'active':
-      case 'in_progress': return 'status-active';
-      case 'completed': 
-      case 'finished': return 'status-completed';
-      default: return 'status-pending';
+      case 'in_progress':
+        return 'status-active';
+      case 'completed':
+      case 'finished':
+        return 'status-completed';
+      default:
+        return 'status-pending';
     }
   };
 
@@ -106,7 +112,9 @@ function MyAttemptsPage({ userId }) {
     <div className="my-attempts-container">
       <div className="attempts-header">
         <h1 className="attempts-title">My Learning Attempts</h1>
-        <p className="attempts-subtitle">Track your progress and review past learning sessions</p>
+        <p className="attempts-subtitle">
+          Track your progress and review past learning sessions
+        </p>
       </div>
 
       <div className="attempts-controls">
@@ -114,7 +122,7 @@ function MyAttemptsPage({ userId }) {
           <span className="button-icon">➕</span>
           Start New Attempt
         </button>
-        
+
         {activeAttemptNumber && (
           <button onClick={handleGoToQuestions} className="attempt-button continue-attempt">
             <span className="button-icon">▶️</span>
@@ -136,7 +144,7 @@ function MyAttemptsPage({ userId }) {
             <span className="count-number">{attempts.length}</span>
             <span className="count-label">Total Attempts</span>
           </div>
-          
+
           <div className="attempts-table-container">
             <table className="attempts-table">
               <thead>
@@ -150,19 +158,28 @@ function MyAttemptsPage({ userId }) {
                 </tr>
               </thead>
               <tbody>
-                {attempts.map(attempt => {
+                {attempts.map((attempt) => {
                   const date = new Date(attempt.createdAt);
                   const formattedDate = date.toLocaleDateString();
-                  const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                  
+                  const formattedTime = date.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+
                   return (
-                    <tr key={attempt.attemptNumber} className={attempt.phase === 'active' ? 'active-row' : ''}>
+                    <tr
+                      key={attempt.attemptNumber}
+                      className={attempt.phase === 'active' ? 'active-row' : ''}
+                    >
                       <td className="attempt-number">{attempt.attemptNumber}</td>
                       <td>
                         <span className={`status-indicator ${getStatusClass(attempt.phase)}`}>
-                          {attempt.phase === 'active' ? 'In Progress' : 
-                            attempt.phase === 'finished' ? 'Completed' : 
-                            attempt.phase.charAt(0).toUpperCase() + attempt.phase.slice(1)}
+                          {attempt.phase === 'active'
+                            ? 'In Progress'
+                            : attempt.phase === 'finished'
+                            ? 'Completed'
+                            : attempt.phase.charAt(0).toUpperCase() +
+                              attempt.phase.slice(1)}
                         </span>
                       </td>
                       <td className="attempt-score">{attempt.total_score || '-'}</td>
@@ -178,14 +195,18 @@ function MyAttemptsPage({ userId }) {
                       </td>
                       <td className="attempt-actions">
                         {attempt.phase === 'active' ? (
-                          <button 
-                            onClick={() => navigate('/questions', { state: { attemptNumber: attempt.attemptNumber } })}
+                          <button
+                            onClick={() =>
+                              navigate('/questions', {
+                                state: { attemptNumber: attempt.attemptNumber },
+                              })
+                            }
                             className="action-button continue"
                           >
                             Continue
                           </button>
                         ) : attempt.phase === 'finished' ? (
-                          <button 
+                          <button
                             onClick={() => handleViewSummary(attempt.attemptNumber)}
                             className="action-button view"
                           >

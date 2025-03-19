@@ -1,9 +1,11 @@
-// server.js in backend/services/adaptive
+// File: backend/services/adaptive/server.js
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config(); // loads from .env in the same folder
+
 const adaptiveRoutes = require('./routes/adaptiveRoutes');
 const { authenticateToken } = require('./authMiddleware');
 
@@ -11,11 +13,12 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-// Connect to Mongo
+// Connect to Mongo using the connection string in .env
 mongoose.connect(process.env.MONGO, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 });
+
 mongoose.connection.on('error', (err) => {
   console.error('MongoDB connection error:', err);
 });
@@ -23,7 +26,7 @@ mongoose.connection.once('open', () => {
   console.log('MongoDB connected successfully for Adaptive component!');
 });
 
-// If you want all endpoints to require token, you can do:
+// If you want all endpoints to require token, uncomment this line:
 // app.use(authenticateToken);
 
 // Set up routes
