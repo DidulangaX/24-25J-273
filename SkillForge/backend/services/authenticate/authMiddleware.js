@@ -1,13 +1,17 @@
+// SkillForge\backend\services\authenticate\authMiddleware.js
 const jwt = require('jsonwebtoken');
 
 const authenticateToken = (req, res, next) => {
-
-  const token = req.header('Authorization');
+  let token = req.header('Authorization');
   if (!token) return res.status(401).json({ message: 'Unauthorized Access' });
+  
+  // Remove "Bearer " prefix if it exists
+  if (token.startsWith('Bearer ')) {
+    token = token.slice(7).trim();
+  }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) return res.status(403).json({ message: 'Forbidden' });
-
     req.user = user;
     next();
   });
