@@ -28,9 +28,9 @@ router.post(
 );
 
 router.post("/interaction", videoController.trackInteraction);
-
-router.get("/difficulty/:videoId", videoController.getDifficulty);
+router.get("/difficulty/:videoId", videoController.detectDifficulty);
 router.post("/difficulty-feedback", videoController.submitDifficultyFeedback);
+router.post("/tab-switch-feedback", videoController.recordTabSwitchFeedback);
 
 router.post("/detect-difficulty/:videoId", videoController.detectDifficulty);
 router.get(
@@ -42,6 +42,10 @@ router.post("/insights/:videoId", videoController.generateInsights);
 router.post("/end-session", videoController.endSession);
 
 router.get("/:id", videoController.getVideoById);
+
+router.get("/user-sessions/:userId", videoController.getUserSessions);
+
+router.get("/sequence/:sequenceId", videoController.getSequenceVideos);
 
 router.get("*", (req, res, next) => {
   console.log("Route hit:", req.path);

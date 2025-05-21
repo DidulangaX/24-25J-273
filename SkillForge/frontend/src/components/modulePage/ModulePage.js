@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-
 import VideoPlayer from "./VideoPlayer/VideoPlayer";
 import LearningAnalytics from "./LearningAnalytics/LearningAnalytics";
 import FeedbackPrompt from "./FeedbackPrompt/FeedbackPrompt";
 import ResourceViewer from "./ResourceViewer/ResourceViewer";
 import InteractionGuidance from "./InteractionGuidance/InteractionGuidance";
 import PersonalizedRecommendationsPanel from "./RecommendationsPanel/PersonalizedRecommendationsPanel";
-
+import TabSwitchPrompt from "./TabSwitchPrompt/TabSwitchPrompt";
+import SessionResumeDialog from "./SessionResumeDialog/SessionResumeDialog";
+import LearningPathVisualization from "./LearningPathVisualization/LearningPathVisualization";
+import SessionContinuityTracker from "../../utils/sessionContinuityTracker";
 import {
   Box,
   Button,
@@ -32,32 +34,38 @@ import {
   InputLeftElement,
   Select,
 } from "@chakra-ui/react";
+
 import { InfoIcon, ChevronLeftIcon, SearchIcon } from "@chakra-ui/icons";
 import { FaPlay, FaFilter } from "react-icons/fa";
 
 const ModulePage = ({ userId = "user123" }) => {
   const { videoId } = useParams();
+  const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [filteredVideos, setFilteredVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showPlayer, setShowPlayer] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-
   const [personalizedRecommendations, setPersonalizedRecommendations] =
     useState(null);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [recommendationsError, setRecommendationsError] = useState(null);
-
   const [viewingResource, setViewingResource] = useState(null);
   const [currentInteractionData, setCurrentInteractionData] = useState(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showTabSwitchPrompt, setShowTabSwitchPrompt] = useState(false);
   const analyticsRef = useRef(null);
+  const videoRef = useRef(null);
   const toast = useToast();
+
+  // Session continuity tracking
+  const [sessionTracker] = useState(new SessionContinuityTracker());
+  const [sessionData, setSessionData] = useState(null);
+  const [showResumeDialog, setShowResumeDialog] = useState(false);
 
   const cardBg = useColorModeValue("white", "gray.700");
   const bgGradient = useColorModeValue(
@@ -101,9 +109,84 @@ const ModulePage = ({ userId = "user123" }) => {
     fetchVideos();
   }, [videoId]);
 
+  // Check for existing session and show resume dialog
+  useEffect(() => {
+    if (selectedVideo && userId) {
+      // Check if there's an existing session
+      const existingSession = sessionTracker.getSession(
+        selectedVideo._id,
+        userId
+      );
+
+      // If there's a significant position and it wasn't recent (within the last minute)
+      if (
+        existingSession &&
+        existingSession.lastPosition > 30 &&
+        Date.now() - existingSession.lastUpdated > 60000
+      ) {
+        setSessionData(existingSession);
+        setShowResumeDialog(true);
+      } else {
+        // Start a new session
+        const sessionInfo = sessionTracker.startSession(
+          selectedVideo._id,
+          userId,
+          0
+        );
+        setSessionData(sessionInfo.sessionData);
+        // No need to show dialog for new sessions
+      }
+    }
+  }, [selectedVideo, userId]);
+
+  // Periodically update the session position during playback
+  useEffect(() => {
+    if (!selectedVideo || !userId) return;
+
+    const updateSessionInterval = setInterval(() => {
+      if (videoRef.current && !videoRef.current.paused) {
+        sessionTracker.updatePosition(
+          selectedVideo._id,
+          userId,
+          videoRef.current.currentTime
+        );
+      }
+    }, 10000); // Update every 10 seconds
+
+    return () => clearInterval(updateSessionInterval);
+  }, [selectedVideo, userId]);
+
+  // Handle session end when user leaves the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (selectedVideo && userId && videoRef.current) {
+        sessionTracker.updatePosition(
+          selectedVideo._id,
+          userId,
+          videoRef.current.currentTime
+        );
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+
+      // End session when component unmounts
+      if (selectedVideo && userId && videoRef.current) {
+        sessionTracker.endSession(
+          selectedVideo._id,
+          userId,
+          videoRef.current.currentTime,
+          videoRef.current.duration || 0
+        );
+      }
+    };
+  }, [selectedVideo, userId]);
+
   useEffect(() => {
     if (videos.length === 0) return;
-
     const filtered = videos.filter((video) => {
       const matchesSearch =
         searchTerm === "" ||
@@ -112,30 +195,32 @@ const ModulePage = ({ userId = "user123" }) => {
           video.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (video.category &&
           video.category.toLowerCase().includes(searchTerm.toLowerCase()));
-
       const matchesDifficulty =
         difficultyFilter === "" || video.difficultyLevel === difficultyFilter;
-
       const matchesCategory =
         categoryFilter === "" || video.category === categoryFilter;
 
       return matchesSearch && matchesDifficulty && matchesCategory;
     });
-
     setFilteredVideos(filtered);
   }, [searchTerm, difficultyFilter, categoryFilter, videos]);
+
+  // Check for tab switching behavior threshold
+  useEffect(() => {
+    if (currentInteractionData?.tabSwitchCount > 3 && !showTabSwitchPrompt) {
+      setShowTabSwitchPrompt(true);
+    }
+  }, [currentInteractionData?.tabSwitchCount]);
 
   const categories = [
     ...new Set(videos.map((video) => video.category).filter(Boolean)),
   ];
 
   const handleSelectVideo = (video) => {
-    setSelectedVideo(video);
-    setShowPlayer(true);
-    setViewingResource(null);
-    setPersonalizedRecommendations(null);
-    setRecommendationsError(null);
-    setShowAnalytics(false);
+    // Navigate to the selected video
+    if (video && video._id) {
+      navigate(`/module-page/${video._id}`);
+    }
   };
 
   const handleBackToVideos = () => {
@@ -180,7 +265,6 @@ const ModulePage = ({ userId = "user123" }) => {
 
   const handleFeedbackSubmit = async (difficulty, responseData) => {
     console.log(`Feedback received with difficulty: ${difficulty}`);
-
     toast({
       title: "Feedback received",
       description: `You rated this content as ${
@@ -194,9 +278,7 @@ const ModulePage = ({ userId = "user123" }) => {
       duration: 3000,
       isClosable: true,
     });
-
     console.log("Full response from feedback:", responseData);
-
     if (!responseData || !responseData.success) {
       console.error("Invalid response from server:", responseData);
       setRecommendationsError(
@@ -204,7 +286,6 @@ const ModulePage = ({ userId = "user123" }) => {
       );
       return;
     }
-
     if (responseData.recommendations) {
       const formattedRecommendations = {
         resources: Array.isArray(responseData.recommendations.resources)
@@ -214,18 +295,14 @@ const ModulePage = ({ userId = "user123" }) => {
         learningPath: responseData.recommendations.learningPath || [],
         difficulty: difficulty,
       };
-
       console.log("Storing recommendations with difficulty:", difficulty);
       console.log("Formatted recommendations:", formattedRecommendations);
-
       setPersonalizedRecommendations(formattedRecommendations);
       setRecommendationsLoading(false);
-
       // Show success toast for resources
       const resourceCount = formattedRecommendations.resources.length;
       const hasNextVideo = !!formattedRecommendations.nextVideo;
       const hasLearningPath = formattedRecommendations.learningPath.length > 0;
-
       if (resourceCount > 0 || hasNextVideo || hasLearningPath) {
         let message = [];
         if (resourceCount > 0) {
@@ -239,7 +316,6 @@ const ModulePage = ({ userId = "user123" }) => {
         if (hasLearningPath) {
           message.push("a personalized learning path");
         }
-
         toast({
           title: "Learning Recommendations Ready",
           description: `We've prepared ${message.join(
@@ -265,10 +341,8 @@ const ModulePage = ({ userId = "user123" }) => {
         learningPath: [],
         difficulty: difficulty,
       };
-
       setPersonalizedRecommendations(basicRecommendations);
       setRecommendationsLoading(false);
-
       toast({
         title: "Learning Tips Available",
         description:
@@ -319,14 +393,37 @@ const ModulePage = ({ userId = "user123" }) => {
     }
   };
 
+  const handleResumeSession = (position) => {
+    // Set video position to the last saved position
+    if (videoRef.current) {
+      videoRef.current.currentTime = position;
+      videoRef.current.play();
+    }
+    setShowResumeDialog(false);
+  };
+
+  const handleStartOver = () => {
+    // Start from the beginning
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play();
+    }
+    // Update session data to reflect starting over
+    const sessionInfo = sessionTracker.startSession(
+      selectedVideo._id,
+      userId,
+      0
+    );
+    setSessionData(sessionInfo.sessionData);
+    setShowResumeDialog(false);
+  };
+
   const handleViewRecommendedVideo = (video) => {
     if (video && video._id) {
       setSelectedVideo(video);
       setViewingResource(null);
       setPersonalizedRecommendations(null);
-
       setShowAnalytics(false);
-
       toast({
         title: "Video changed",
         description: `Now playing: ${video.title}`,
@@ -420,7 +517,6 @@ const ModulePage = ({ userId = "user123" }) => {
                 borderColor="gray.200"
               />
             </InputGroup>
-
             {/* Filter controls - Mobile first approach */}
             <Flex wrap="wrap" gap={3}>
               <Box flex="1" minW="200px">
@@ -438,7 +534,6 @@ const ModulePage = ({ userId = "user123" }) => {
                   <option value="advanced">Advanced</option>
                 </Select>
               </Box>
-
               <Box flex="1" minW="200px">
                 <Select
                   placeholder="Category"
@@ -456,7 +551,6 @@ const ModulePage = ({ userId = "user123" }) => {
                   ))}
                 </Select>
               </Box>
-
               <Box>
                 <Button
                   colorScheme="gray"
@@ -469,14 +563,12 @@ const ModulePage = ({ userId = "user123" }) => {
               </Box>
             </Flex>
           </Box>
-
           {/* Results count and feedback */}
           <Box mb={4} pl={2}>
             <Text color="gray.600" fontSize="sm">
               Showing {filteredVideos.length} of {videos.length} videos
             </Text>
           </Box>
-
           {/* Video Grid */}
           {filteredVideos.length > 0 ? (
             <Grid
@@ -543,7 +635,6 @@ const ModulePage = ({ userId = "user123" }) => {
                       {getDifficultyProps(video.difficultyLevel).text}
                     </Badge>
                   </Box>
-
                   <CardBody pb={2}>
                     <Text
                       fontSize="xs"
@@ -609,18 +700,45 @@ const ModulePage = ({ userId = "user123" }) => {
               <Heading as="h3" size="lg" mb={4}>
                 {selectedVideo.title}
               </Heading>
+
+              {/* Session Resume Dialog */}
+              {showResumeDialog && (
+                <SessionResumeDialog
+                  isOpen={showResumeDialog}
+                  onClose={() => setShowResumeDialog(false)}
+                  onResume={handleResumeSession}
+                  onStartOver={handleStartOver}
+                  sessionData={sessionData}
+                  videoDuration={selectedVideo?.duration || 0}
+                />
+              )}
+
+              {/* Video Player */}
               <VideoPlayer
                 videoId={selectedVideo._id}
                 videoUrl={`http://localhost:5000/api/videos/stream/${selectedVideo._id}`}
                 userId={userId}
                 onInteractionUpdate={setCurrentInteractionData}
+                videoRef={videoRef}
               />
+
               {/* Interactive Guidance Component */}
               <InteractionGuidance
                 interactionData={currentInteractionData}
                 videoPosition={currentInteractionData?.lastPosition || 0}
                 onAction={handleGuidanceAction}
               />
+
+              {/* Tab Switch Prompt */}
+              {showTabSwitchPrompt && (
+                <TabSwitchPrompt
+                  videoId={selectedVideo._id}
+                  userId={userId}
+                  currentTime={currentInteractionData?.lastPosition || 0}
+                  onClose={() => setShowTabSwitchPrompt(false)}
+                />
+              )}
+
               <Box
                 p={4}
                 bg="gray.50"
@@ -633,6 +751,17 @@ const ModulePage = ({ userId = "user123" }) => {
                   {selectedVideo.description || "No description available"}
                 </Text>
               </Box>
+
+              {/* Learning Path Visualization */}
+              {selectedVideo.sequenceId && (
+                <LearningPathVisualization
+                  currentVideoId={selectedVideo._id}
+                  userId={userId}
+                  sequenceId={selectedVideo.sequenceId}
+                  onSelectVideo={handleSelectVideo}
+                />
+              )}
+
               {/* Learning Action Buttons */}
               <Stack spacing={4} my={6}>
                 {/* Feedback Button */}
@@ -644,7 +773,6 @@ const ModulePage = ({ userId = "user123" }) => {
                     onFeedbackSubmit={handleFeedbackSubmit}
                   />
                 </Box>
-
                 {/* Analyze Learning Pattern Button - styled like the feedback button */}
                 <Box width="100%" textAlign="center">
                   <Button

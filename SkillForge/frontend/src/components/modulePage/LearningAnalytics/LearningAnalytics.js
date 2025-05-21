@@ -64,6 +64,8 @@ import {
   FaClock,
   FaBookOpen,
   FaLock,
+  FaExchangeAlt,
+  FaSignOutAlt,
 } from "react-icons/fa";
 
 const LearningAnalytics = ({ videoId, userId }) => {
@@ -488,6 +490,107 @@ const LearningAnalytics = ({ videoId, userId }) => {
                           </>
                         )}
                     </VStack>
+                  </CardBody>
+                </Card>
+                {/* New engagement metrics card */}
+                <Card variant="outline" borderRadius="md">
+                  <CardHeader bg="purple.50" py={3}>
+                    <Heading size="sm">
+                      <Flex align="center">
+                        <Icon as={FaEye} mr={2} color="purple.600" />
+                        Enhanced Engagement Metrics
+                      </Flex>
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <Stack spacing={4}>
+                      {/* Tab visibility metric */}
+                      <Box>
+                        <Flex justify="space-between" mb={1}>
+                          <Text fontSize="sm">Tab Visibility:</Text>
+                          <Text fontSize="sm" fontWeight="medium">
+                            {Math.round(
+                              analytics.interactionSummary
+                                .tab_visibility_ratio * 100
+                            )}
+                            %
+                          </Text>
+                        </Flex>
+                        <Progress
+                          value={
+                            analytics.interactionSummary.tab_visibility_ratio *
+                            100
+                          }
+                          size="sm"
+                          colorScheme="purple"
+                          borderRadius="md"
+                        />
+                        <Text fontSize="xs" color="gray.500" mt={1}>
+                          Time spent with this tab visible and active
+                        </Text>
+                      </Box>
+
+                      {/* Tab switching info */}
+                      <Flex justify="space-between" align="center">
+                        <HStack>
+                          <Icon as={FaExchangeAlt} color="blue.500" />
+                          <Text fontSize="sm">Tab Switches:</Text>
+                        </HStack>
+                        <Badge
+                          colorScheme={
+                            analytics.interactionSummary.tab_switch_frequency >
+                            3
+                              ? "orange"
+                              : "green"
+                          }
+                        >
+                          {analytics.interactionSummary.tab_switch_frequency.toFixed(
+                            1
+                          )}{" "}
+                          per minute
+                        </Badge>
+                      </Flex>
+
+                      {/* Inactivity info */}
+                      <Flex justify="space-between" align="center">
+                        <HStack>
+                          <Icon as={FaClock} color="blue.500" />
+                          <Text fontSize="sm">Inactive Time:</Text>
+                        </HStack>
+                        <Text fontSize="sm">
+                          {Math.round(
+                            analytics.interactionSummary.total_inactivity_time
+                          )}
+                          s
+                          <Text as="span" fontSize="xs" ml={1} color="gray.500">
+                            (
+                            {Math.round(
+                              analytics.interactionSummary.inactivity_ratio *
+                                100
+                            )}
+                            %)
+                          </Text>
+                        </Text>
+                      </Flex>
+
+                      {/* Exit attempts */}
+                      <Flex justify="space-between" align="center">
+                        <HStack>
+                          <Icon as={FaSignOutAlt} color="blue.500" />
+                          <Text fontSize="sm">Session Exit Attempts:</Text>
+                        </HStack>
+                        <Badge
+                          colorScheme={
+                            analytics.interactionSummary.session_exit_attempts >
+                            0
+                              ? "red"
+                              : "green"
+                          }
+                        >
+                          {analytics.interactionSummary.session_exit_attempts}
+                        </Badge>
+                      </Flex>
+                    </Stack>
                   </CardBody>
                 </Card>
               </SimpleGrid>

@@ -8,10 +8,9 @@ const UserProfile = require("../models/UserProfile");
 const { calculateDifficulty } = require("../utils/difficultyDetection");
 const { generateSummary } = require("../utils/interactionAnalytics");
 const DifficultyDetectionService = require("../services/difficultyDetectionService");
+let sessionInteractions = {};
 
 const difficultyService = new DifficultyDetectionService();
-
-let sessionInteractions = {};
 
 const cleanupOldInteractions = () => {
   // Keep only interactions from the last 30 minutes
@@ -463,32 +462,10 @@ exports.streamVideo = async (req, res) => {
   }
 };
 
-exports.getDifficulty = async (req, res) => {
-  try {
-    const { videoId } = req.params;
-    const video = await Video.findById(videoId);
-
-    if (!video) {
-      return res.status(404).json({ message: "Video not found" });
-    }
-
-    const interactions = await UserInteraction.find({ videoId });
-    const difficulty = calculateDifficulty(interactions, video.duration || 300);
-
-    res.json({ videoId, difficulty });
-  } catch (error) {
-    console.error("Error getting difficulty:", error);
-    res
-      .status(500)
-      .json({ message: "Error getting difficulty", error: error.message });
-  }
-};
-
 exports.detectDifficulty = async (req, res) => {
   try {
     const { videoId } = req.params;
     const { userId } = req.body;
-
     if (!videoId || !userId) {
       return res.status(400).json({
         message: "Missing required parameters",
@@ -523,22 +500,40 @@ exports.detectDifficulty = async (req, res) => {
       interactions,
       video.duration || 300
     );
+
     console.log(
       "Processed interaction data for difficulty detection:",
       interactionData
     );
 
-    // Call Python script with interaction data as JSON
+    // Write the interaction data to a temporary file to avoid command line length issues
+    const fs = require("fs");
+    const path = require("path");
+    const tempDir = path.join(__dirname, "../temp");
+
+    // Create temp directory if it doesn't exist
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const tempFilePath = path.join(
+      tempDir,
+      `interaction_data_${Date.now()}.json`
+    );
+    fs.writeFileSync(tempFilePath, JSON.stringify(interactionData));
+
+    // Call Python script with the file path
+    const { spawn } = require("child_process");
     const pythonScriptPath = path.join(
       __dirname,
       "../utils/difficulty_detector_model.py"
     );
-    console.log(`Running Python script: ${pythonScriptPath}`);
 
-    const pythonProcess = spawn("python", [
-      pythonScriptPath,
-      JSON.stringify(interactionData),
-    ]);
+    console.log(
+      `Running Python script: ${pythonScriptPath} with data from ${tempFilePath}`
+    );
+
+    const pythonProcess = spawn("python", [pythonScriptPath, tempFilePath]);
 
     let predictionData = "";
     let errorOutput = "";
@@ -559,17 +554,34 @@ exports.detectDifficulty = async (req, res) => {
     pythonProcess.on("close", async (code) => {
       console.log(`Python process exited with code ${code}`);
 
+      // Clean up the temp file
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (cleanupError) {
+        console.error("Error cleaning up temp file:", cleanupError);
+      }
+
       try {
         // Parse prediction result
-        const prediction = predictionData
-          ? JSON.parse(predictionData)
-          : {
+        let prediction;
+        if (predictionData) {
+          try {
+            prediction = JSON.parse(predictionData);
+          } catch (parseError) {
+            console.error("Error parsing prediction data:", parseError);
+            prediction = {
               predicted_difficulty: 0,
               confidence: 0.5,
-              insights: [
-                "Unable to determine difficulty - using default values",
-              ],
+              insights: ["Error parsing prediction data"],
             };
+          }
+        } else {
+          prediction = {
+            predicted_difficulty: 0,
+            confidence: 0.5,
+            insights: ["No prediction data received"],
+          };
+        }
 
         // Generate contextual recommendations
         const recommendations = [];
@@ -586,7 +598,6 @@ exports.detectDifficulty = async (req, res) => {
             const timeRange = `${formatTime(section.startTime)}-${formatTime(
               section.endTime
             )}`;
-
             if (section.replayCount > 0) {
               recommendations.push(
                 `You replayed section ${timeRange} ${section.replayCount} times. Consider reviewing this concept more thoroughly.`
@@ -606,10 +617,236 @@ exports.detectDifficulty = async (req, res) => {
               "Try taking notes during your viewing to reinforce key concepts."
             );
           }
-
-          if (interactionData.pause_rate > 8) {
+          if (interactionData.pause_rate > 3) {
             recommendations.push(
               "Consider reviewing prerequisite content before continuing."
+            );
+          }
+          if (interactionData.tab_switch_frequency > 2) {
+            recommendations.push(
+              "We noticed you frequently switched tabs. Try our supplementary resources for clearer explanations."
+            );
+          }
+        } else {
+          if (interactionData.seek_forward_frequency > 3) {
+            recommendations.push(
+              "You're advancing quickly - consider exploring more challenging content"
+            );
+          }
+        }
+
+        // Combine everything into a final response
+        return res.json({
+          videoId,
+          userId,
+          prediction,
+          interactionSummary: interactionData,
+          recommendations:
+            recommendations.length > 0
+              ? recommendations
+              : [
+                  prediction.predicted_difficulty === 1
+                    ? "Consider reviewing prerequisite content before continuing"
+                    : "Continue with the recommended learning path",
+                ],
+          success: true,
+        });
+      } catch (error) {
+        console.error("Error processing prediction:", error);
+        return res.status(500).json({
+          message: "Error processing difficulty prediction",
+          error: error.message,
+          pythonOutput: predictionData,
+          pythonError: errorOutput,
+          success: false,
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Error in detectDifficulty:", error);
+    res.status(500).json({
+      message: "Error detecting difficulty",
+      error: error.message,
+      success: false,
+    });
+  }
+};
+
+// Make sure formatTime is defined
+function formatTime(seconds) {
+  if (isNaN(seconds)) return "00:00";
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+// Updated detectDifficulty function
+
+exports.detectDifficulty = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const { userId } = req.body;
+    if (!videoId || !userId) {
+      return res.status(400).json({
+        message: "Missing required parameters",
+        success: false,
+      });
+    }
+
+    // Check if we have interactions
+    if (
+      !sessionInteractions[videoId] ||
+      !sessionInteractions[videoId][userId] ||
+      sessionInteractions[videoId][userId].length < 2
+    ) {
+      return res.status(404).json({
+        message: "Not enough interaction data. Please watch more of the video.",
+        success: false,
+      });
+    }
+
+    // Get video information
+    const video = await Video.findById(videoId);
+    if (!video) {
+      return res.status(404).json({
+        message: "Video not found",
+        success: false,
+      });
+    }
+
+    // Get and process interactions
+    const interactions = sessionInteractions[videoId][userId];
+    const interactionData = processInteractions(
+      interactions,
+      video.duration || 300
+    );
+
+    console.log(
+      "Processed interaction data for difficulty detection:",
+      interactionData
+    );
+
+    // Write the interaction data to a temporary file to avoid command line length issues
+    const fs = require("fs");
+    const path = require("path");
+    const tempDir = path.join(__dirname, "../temp");
+
+    // Create temp directory if it doesn't exist
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const tempFilePath = path.join(
+      tempDir,
+      `interaction_data_${Date.now()}.json`
+    );
+    fs.writeFileSync(tempFilePath, JSON.stringify(interactionData));
+
+    // Call Python script with the file path
+    const { spawn } = require("child_process");
+    const pythonScriptPath = path.join(
+      __dirname,
+      "../utils/difficulty_detector_model.py"
+    );
+
+    console.log(
+      `Running Python script: ${pythonScriptPath} with data from ${tempFilePath}`
+    );
+
+    const pythonProcess = spawn("python", [pythonScriptPath, tempFilePath]);
+
+    let predictionData = "";
+    let errorOutput = "";
+
+    // Collect output from the Python script
+    pythonProcess.stdout.on("data", (data) => {
+      predictionData += data.toString();
+      console.log(`Python stdout: ${data.toString()}`);
+    });
+
+    // Collect any error messages
+    pythonProcess.stderr.on("data", (data) => {
+      errorOutput += data.toString();
+      console.error(`Python stderr: ${data.toString()}`);
+    });
+
+    // Handle process completion
+    pythonProcess.on("close", async (code) => {
+      console.log(`Python process exited with code ${code}`);
+
+      // Clean up the temp file
+      try {
+        fs.unlinkSync(tempFilePath);
+      } catch (cleanupError) {
+        console.error("Error cleaning up temp file:", cleanupError);
+      }
+
+      try {
+        // Parse prediction result
+        let prediction;
+        if (predictionData) {
+          try {
+            prediction = JSON.parse(predictionData);
+          } catch (parseError) {
+            console.error("Error parsing prediction data:", parseError);
+            prediction = {
+              predicted_difficulty: 0,
+              confidence: 0.5,
+              insights: ["Error parsing prediction data"],
+            };
+          }
+        } else {
+          prediction = {
+            predicted_difficulty: 0,
+            confidence: 0.5,
+            insights: ["No prediction data received"],
+          };
+        }
+
+        // Generate contextual recommendations
+        const recommendations = [];
+
+        // Check for problematic sections
+        if (
+          interactionData.problematic_sections &&
+          interactionData.problematic_sections.length > 0
+        ) {
+          const difficultSections = interactionData.problematic_sections;
+
+          // Add section-specific recommendations
+          difficultSections.forEach((section) => {
+            const timeRange = `${formatTime(section.startTime)}-${formatTime(
+              section.endTime
+            )}`;
+            if (section.replayCount > 0) {
+              recommendations.push(
+                `You replayed section ${timeRange} ${section.replayCount} times. Consider reviewing this concept more thoroughly.`
+              );
+            } else if (section.pauseCount > 1) {
+              recommendations.push(
+                `We noticed you paused frequently during ${timeRange}. This section might contain challenging concepts.`
+              );
+            }
+          });
+        }
+
+        // Add general recommendations based on interaction patterns
+        if (prediction.predicted_difficulty === 1) {
+          if (interactionData.replay_frequency > 2) {
+            recommendations.push(
+              "Try taking notes during your viewing to reinforce key concepts."
+            );
+          }
+          if (interactionData.pause_rate > 3) {
+            recommendations.push(
+              "Consider reviewing prerequisite content before continuing."
+            );
+          }
+          if (interactionData.tab_switch_frequency > 2) {
+            recommendations.push(
+              "We noticed you frequently switched tabs. Try our supplementary resources for clearer explanations."
             );
           }
         } else {
@@ -1710,6 +1947,66 @@ exports.generateInsights = async (req, res) => {
   }
 };
 
+// Add to videoController.js
+exports.recordTabSwitchFeedback = async (req, res) => {
+  try {
+    const { videoId, userId, reason, position, timestamp } = req.body;
+
+    if (!videoId || !userId || !reason) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required parameters",
+      });
+    }
+
+    // Store in database
+    let userInteraction = await UserInteraction.findOne({ userId, videoId });
+
+    if (userInteraction) {
+      // Add to existing tabSwitchFeedback array or create one
+      if (!userInteraction.tabSwitchFeedback) {
+        userInteraction.tabSwitchFeedback = [];
+      }
+
+      userInteraction.tabSwitchFeedback.push({
+        reason,
+        position,
+        timestamp: timestamp || Date.now(),
+      });
+
+      userInteraction.updatedAt = Date.now();
+      await userInteraction.save();
+    } else {
+      // Create new interaction with feedback
+      userInteraction = await UserInteraction.create({
+        userId,
+        videoId,
+        tabSwitchFeedback: [
+          {
+            reason,
+            position,
+            timestamp: timestamp || Date.now(),
+          },
+        ],
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Tab switch feedback recorded",
+    });
+  } catch (error) {
+    console.error("Error recording tab switch feedback:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error recording tab switch feedback",
+      error: error.message,
+    });
+  }
+};
+
+// Update processInteractions function in videoController.js
+
 function processInteractions(interactions, videoDuration) {
   // If no interactions, return empty data
   if (!interactions || interactions.length === 0) {
@@ -1725,6 +2022,14 @@ function processInteractions(interactions, videoDuration) {
       average_speed: 1.0,
       pause_rate: 0,
       replay_ratio: 0,
+
+      // New metrics with default values
+      tab_switch_frequency: 0,
+      total_inactivity_time: 0,
+      inactivity_ratio: 0,
+      tab_visibility_ratio: 1.0,
+      session_exit_attempts: 0,
+      active_viewing_ratio: 1.0,
     };
   }
 
@@ -1735,7 +2040,7 @@ function processInteractions(interactions, videoDuration) {
     (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
   );
 
-  // Initialize counters and arrays
+  // Initialize counters
   let stats = {
     session_duration: 0,
     total_pauses: 0,
@@ -1746,19 +2051,28 @@ function processInteractions(interactions, videoDuration) {
     skipped_content: 0,
     speed_changes: 0,
     average_speed: 1.0,
+
+    // New stats
+    tab_switches: 0,
+    total_hidden_time: 0,
+    total_inactive_time: 0,
+    session_exit_attempts: 0,
   };
 
+  // Track last state
   let lastPosition = null;
   let lastTimestamp = new Date(sortedInteractions[0].timestamp);
   let pauseStartTime = null;
+  let tabHiddenStartTime = null;
+  let userInactiveStartTime = null;
 
-  // Section analysis (divide video into 10-second sections)
-  const sectionSize = 10; // Seconds per section
+  // Section analysis
+  const sectionSize = 10; // 10-second sections
   const numSections = Math.ceil(videoDuration / sectionSize);
   const sectionPauses = new Array(numSections).fill(0);
   const sectionReplays = new Array(numSections).fill(0);
 
-  // Process each interaction in chronological order
+  // Process each interaction
   for (let i = 0; i < sortedInteractions.length; i++) {
     const interaction = sortedInteractions[i];
     const currentPosition =
@@ -1771,96 +2085,99 @@ function processInteractions(interactions, videoDuration) {
       stats.session_duration += timeDiff;
     }
 
-    // Process by interaction type and update section data
-    if (currentPosition !== null) {
-      const sectionIndex = Math.min(
-        Math.floor(currentPosition / sectionSize),
-        numSections - 1
-      );
+    // Process by interaction type
+    switch (interaction.interactionType) {
+      case "pause":
+        const sectionIndexPause =
+          currentPosition !== null
+            ? Math.min(
+                Math.floor(currentPosition / sectionSize),
+                numSections - 1
+              )
+            : 0;
+        sectionPauses[sectionIndexPause]++;
+        stats.total_pauses++;
+        pauseStartTime = currentTimestamp;
+        break;
 
-      switch (interaction.interactionType) {
-        case "pause":
-          sectionPauses[sectionIndex]++;
-          stats.total_pauses++;
-          pauseStartTime = currentTimestamp;
-          break;
-
-        case "play":
-          // If coming from a pause, record the pause duration
-          if (pauseStartTime) {
-            const pauseDuration = (currentTimestamp - pauseStartTime) / 1000;
-            if (pauseDuration >= 0.5) {
-              // Only count pauses longer than 0.5 seconds
-              stats.pause_durations.push(pauseDuration);
-              console.log(
-                `Recorded pause duration: ${pauseDuration.toFixed(2)}s`
-              );
-            }
-            pauseStartTime = null;
+      case "play":
+        // If coming from a pause, record the pause duration
+        if (pauseStartTime) {
+          const pauseDuration = (currentTimestamp - pauseStartTime) / 1000;
+          if (pauseDuration >= 0.5) {
+            // Only count pauses longer than 0.5 seconds
+            stats.pause_durations.push(pauseDuration);
           }
-          break;
-      }
-    }
-
-    // Process seeks and implicit seeks
-    if (lastPosition !== null && currentPosition !== null) {
-      // Calculate difference between current and last position
-      const diff = currentPosition - lastPosition;
-
-      // Process significant position changes
-      if (Math.abs(diff) > 0.5) {
-        if (diff > 0) {
-          // Forward seek (skipping content)
-          stats.seek_forward_frequency++;
-          stats.skipped_content += diff;
-          console.log(
-            `${
-              interaction.interactionType === "seek"
-                ? "Forward seek"
-                : "Implicit forward seek"
-            }: ${diff.toFixed(2)}s from ${lastPosition.toFixed(
-              2
-            )} to ${currentPosition.toFixed(2)}`
-          );
-        } else {
-          // Backward seek (replay)
-          stats.replay_frequency++;
-          stats.replay_duration += Math.abs(diff);
-
-          // Track which section was replayed (the target section)
-          const targetSectionIndex = Math.min(
-            Math.floor(currentPosition / sectionSize),
-            numSections - 1
-          );
-          sectionReplays[targetSectionIndex]++;
-
-          console.log(
-            `${
-              interaction.interactionType === "seek"
-                ? "Backward seek"
-                : "Implicit backward seek"
-            } (replay): ${Math.abs(diff).toFixed(
-              2
-            )}s from ${lastPosition.toFixed(2)} to ${currentPosition.toFixed(
-              2
-            )}`
-          );
+          pauseStartTime = null;
         }
-      }
+        break;
+
+      case "seek":
+        // Handle seeks based on previous position
+        if (lastPosition !== null && currentPosition !== null) {
+          const diff = currentPosition - lastPosition;
+
+          if (Math.abs(diff) > 0.5) {
+            if (diff > 0) {
+              // Forward seek (skipping content)
+              stats.seek_forward_frequency++;
+              stats.skipped_content += diff;
+            } else {
+              // Backward seek (replay)
+              stats.replay_frequency++;
+              stats.replay_duration += Math.abs(diff);
+
+              // Track section that was replayed
+              const targetSectionIndex = Math.min(
+                Math.floor(currentPosition / sectionSize),
+                numSections - 1
+              );
+              sectionReplays[targetSectionIndex]++;
+            }
+          }
+        }
+        break;
+
+      case "speed":
+        if (interaction.speed && interaction.speed !== stats.average_speed) {
+          stats.speed_changes++;
+          stats.average_speed = interaction.speed;
+        }
+        break;
+
+      // New interaction types
+      case "tab_unfocused":
+        stats.tab_switches++;
+        tabHiddenStartTime = currentTimestamp;
+        break;
+
+      case "tab_focused":
+        if (tabHiddenStartTime) {
+          const hiddenDuration = (currentTimestamp - tabHiddenStartTime) / 1000;
+          stats.total_hidden_time += hiddenDuration;
+          tabHiddenStartTime = null;
+        }
+        break;
+
+      case "user_inactive":
+        userInactiveStartTime = currentTimestamp;
+        break;
+
+      case "activity_resumed":
+        if (userInactiveStartTime) {
+          const inactiveDuration =
+            (currentTimestamp - userInactiveStartTime) / 1000;
+          stats.total_inactive_time += inactiveDuration;
+          userInactiveStartTime = null;
+        }
+        break;
+
+      case "exit_attempt":
+        stats.session_exit_attempts++;
+        break;
     }
 
-    // Process speed changes
-    if (
-      interaction.interactionType === "speed" &&
-      interaction.speed &&
-      interaction.speed !== stats.average_speed
-    ) {
-      stats.speed_changes++;
-      stats.average_speed = interaction.speed;
-      console.log(`Speed changed to: ${stats.average_speed}x`);
-    }
-
-    // Update tracking variables for next iteration
+    // Update tracking variables for the next iteration
     if (currentPosition !== null) {
       lastPosition = currentPosition;
     }
@@ -1890,8 +2207,6 @@ function processInteractions(interactions, videoDuration) {
   // Sort problematic sections by difficulty
   problematicSections.sort((a, b) => b.difficulty - a.difficulty);
 
-  // Calculate derived metrics
-
   // Calculate median pause duration
   if (stats.pause_durations.length > 0) {
     const sortedDurations = [...stats.pause_durations].sort((a, b) => a - b);
@@ -1902,14 +2217,37 @@ function processInteractions(interactions, videoDuration) {
         : sortedDurations[middle];
   }
 
-  // Calculate pause rate (pauses per minute)
-  if (stats.session_duration > 0) {
-    stats.pause_rate = stats.total_pauses / (stats.session_duration / 60);
-    stats.replay_ratio = Math.min(
-      stats.replay_duration / Math.max(stats.session_duration, 1),
-      1
-    );
-  }
+  // Calculate derived metrics
+  // Pause rate (pauses per minute)
+  const minutes_watched = Math.max(stats.session_duration / 60, 0.1); // Avoid division by zero
+  const pause_rate = stats.total_pauses / minutes_watched;
+
+  // Replay ratio (replay duration / session duration)
+  const replay_ratio =
+    stats.session_duration > 0
+      ? Math.min(stats.replay_duration / stats.session_duration, 1)
+      : 0;
+
+  // Tab visibility ratio (visible time / total time)
+  const tab_visibility_ratio =
+    stats.session_duration > 0
+      ? Math.max(1 - stats.total_hidden_time / stats.session_duration, 0)
+      : 1.0;
+
+  // Active viewing ratio (active time / total time)
+  const active_viewing_ratio =
+    stats.session_duration > 0
+      ? Math.max(1 - stats.total_inactive_time / stats.session_duration, 0)
+      : 1.0;
+
+  // Tab switch frequency (switches per minute)
+  const tab_switch_frequency = stats.tab_switches / minutes_watched;
+
+  // Inactivity ratio (inactive time / total time)
+  const inactivity_ratio =
+    stats.session_duration > 0
+      ? stats.total_inactive_time / stats.session_duration
+      : 0;
 
   // Log summary for debugging
   console.log("Interaction analysis summary:", {
@@ -1922,9 +2260,13 @@ function processInteractions(interactions, videoDuration) {
     replay_duration: `${stats.replay_duration.toFixed(2)}s`,
     speed_changes: stats.speed_changes,
     average_speed: `${stats.average_speed.toFixed(2)}x`,
+    tab_switches: stats.tab_switches,
+    total_hidden_time: `${stats.total_hidden_time.toFixed(2)}s`,
+    total_inactive_time: `${stats.total_inactive_time.toFixed(2)}s`,
+    exit_attempts: stats.session_exit_attempts,
   });
 
-  // Return final result with problematic sections
+  // Return final result with all metrics
   return {
     session_duration: stats.session_duration,
     total_pauses: stats.total_pauses,
@@ -1935,9 +2277,19 @@ function processInteractions(interactions, videoDuration) {
     skipped_content: stats.skipped_content,
     speed_changes: stats.speed_changes,
     average_speed: stats.average_speed,
-    pause_rate: stats.pause_rate || 0,
-    replay_ratio: stats.replay_ratio || 0,
-    problematic_sections: problematicSections.slice(0, 3), // Top 3 most difficult sections
+    pause_rate: pause_rate,
+    replay_ratio: replay_ratio,
+
+    // New metrics
+    tab_switch_frequency: tab_switch_frequency,
+    total_inactivity_time: stats.total_inactive_time,
+    inactivity_ratio: inactivity_ratio,
+    tab_visibility_ratio: tab_visibility_ratio,
+    session_exit_attempts: stats.session_exit_attempts,
+    active_viewing_ratio: active_viewing_ratio,
+
+    // Top problematic sections
+    problematic_sections: problematicSections.slice(0, 3),
   };
 }
 
@@ -2065,3 +2417,97 @@ async function getRecommendationsForVideo(videoId, difficulty) {
     };
   }
 }
+
+exports.getUserSessions = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing userId parameter",
+      });
+    }
+
+    // Get all user interactions
+    const interactions = await UserInteraction.find({ userId })
+      .select("videoId userFeedback pauseCount replayCount completionRatio")
+      .lean();
+
+    // Get list of videoIds to fetch video details
+    const videoIds = interactions.map((i) => i.videoId);
+    const videos = await Video.find({ _id: { $in: videoIds } })
+      .select("title difficultyLevel category sequenceId sequencePosition")
+      .lean();
+
+    // Create a map for quick lookup
+    const videoMap = videos.reduce((map, video) => {
+      map[video._id.toString()] = video;
+      return map;
+    }, {});
+
+    // Combine data into sessions
+    const sessions = interactions.map((interaction) => {
+      const videoId = interaction.videoId.toString();
+      const video = videoMap[videoId] || {};
+
+      return {
+        videoId,
+        title: video.title || "Unknown Video",
+        difficultyLevel: video.difficultyLevel,
+        category: video.category,
+        sequenceId: video.sequenceId,
+        sequencePosition: video.sequencePosition,
+        userFeedback: interaction.userFeedback,
+        pauseCount: interaction.pauseCount,
+        replayCount: interaction.replayCount,
+        completionRatio: interaction.completionRatio || 0,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      userId,
+      sessions,
+    });
+  } catch (error) {
+    console.error("Error fetching user sessions:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving user sessions",
+      error: error.message,
+    });
+  }
+};
+
+exports.getSequenceVideos = async (req, res) => {
+  try {
+    const { sequenceId } = req.params;
+
+    if (!sequenceId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing sequenceId parameter",
+      });
+    }
+
+    const videos = await Video.find({ sequenceId })
+      .sort("sequencePosition")
+      .select(
+        "title description category difficultyLevel level sequencePosition thumbnailPath"
+      );
+
+    res.status(200).json({
+      success: true,
+      sequenceId,
+      videos,
+    });
+  } catch (error) {
+    console.error("Error fetching sequence videos:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving sequence videos",
+      error: error.message,
+    });
+  }
+};

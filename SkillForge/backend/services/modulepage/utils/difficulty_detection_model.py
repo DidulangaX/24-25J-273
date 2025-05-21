@@ -32,19 +32,21 @@ class DifficultyDetectionModel:
         
         # Define the features the model expects based on research findings
         self.features = [
-            'session_duration',  # Total time spent on the video (seconds)
-            'total_pauses',      # Number of times user paused the video
-            'pause_rate',        # Pauses per minute
-            'pause_median_duration', # Median duration of pauses (seconds)
-            'replay_frequency',  # Number of times user replayed sections
-            'replay_duration',   # Total time spent on replays (seconds)
-            'replay_ratio',      # Portion of time spent on replays
-            'seek_forward_frequency', # Number of forward seeks
-            'skipped_content',   # Amount of content skipped (seconds)
-            'speed_changes',     # Number of speed changes
-            'average_speed',     # Average playback speed
-        ]
-        
+    'session_duration',
+    'total_pauses',
+    'pause_rate',
+    'replay_frequency',
+    'replay_duration',
+    'seek_forward_frequency',
+    'skipped_content',
+    'replay_ratio',
+    'tab_switch_frequency',
+    'total_inactivity_time',
+    'inactivity_ratio',
+    'tab_visibility_ratio',
+    'session_exit_attempts',
+    'active_viewing_ratio'
+]
         # Load model if path provided
         if model_path and os.path.exists(model_path):
             self.load_model(model_path)
