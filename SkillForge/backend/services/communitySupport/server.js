@@ -29,14 +29,14 @@ const connectDB = async () => {
 connectDB();
 
 // Import Routes
-//const communityRoutes = require('./routes/communityRoutes');
+
 const questionRoutes = require('./routes/questionRoutes');
 const answerRoutes = require('./routes/answerRoutes');
 const questionAnswerRoutes = require('./routes/questionAnswerRoutes');
 
 
 // Use Routes
-//app.use('/api/community', communityRoutes);
+
 app.use('/api/community/questions', questionRoutes);
 app.use('/api/community/answers', answerRoutes);
 app.use('/api/community/questions', questionAnswerRoutes);
