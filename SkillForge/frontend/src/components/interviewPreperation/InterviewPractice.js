@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 export default function InterviewPractice() {
   return (
-    <Container centerContent maxW="container.md" py={10}>
+    <Container centerContent maxW="container.md" py={10} pt={20}>
       <VStack spacing={6} textAlign="center">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -25,7 +25,7 @@ export default function InterviewPractice() {
         </motion.div>
 
         <motion.div whileHover={{ scale: 1.05 }}>
-          <Button as={Link} to="/start-interview" colorScheme="blue" size="lg">
+          <Button as={Link} to="/start-interview" colorScheme="grey" size="lg">
             Start Interview Practice
           </Button>
         </motion.div>
