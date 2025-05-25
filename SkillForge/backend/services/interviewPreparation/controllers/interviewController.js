@@ -1,26 +1,31 @@
 // SKILLFORGE\backend\services\interviewPreparation\controllers\interviewController.js
 const InterviewQuestion = require('../models/InterviewQuestion');
 const axios = require("axios");
-
 const path = require('path');
 const { spawn } = require('child_process');
 
 const submitAnswer = async (req, res) => {
   try {
-    const { answer, questionType } = req.body;
+    const { answer, questionType, question } = req.body;
     if (!answer || answer.trim() === '') {
       return res.status(400).json({ message: 'Answer text is required' });
     }
 
-    // choose the right model
-    const scriptFile =
-      questionType === 'coding'
-        ? 'logicalErrorModel.py'
-        : 'theoryAnswerModel.py';
+    // Determine script
+    const scriptFile = questionType === 'coding'
+      ? 'logicalErrorModel.py'
+      : 'theoryAnswerChecker.py';
     const scriptPath = path.join(__dirname, '../models', scriptFile);
 
-    const pythonProcess = spawn('python', [scriptPath, answer]);
-    let stdout = '', stderr = '';
+    // Build args array
+    const args = questionType === 'coding'
+      ? [scriptPath, answer]
+      : [scriptPath, question, answer];
+
+    // Spawn Python process
+    const pythonProcess = spawn('python', args);
+    let stdout = '';
+    let stderr = '';
 
     pythonProcess.stdout.on('data', (data) => {
       stdout += data.toString();
@@ -32,28 +37,24 @@ const submitAnswer = async (req, res) => {
     pythonProcess.on('close', () => {
       if (stderr) {
         console.error('Python script error:', stderr);
-        return res
-          .status(500)
-          .json({ message: 'AI model error', error: stderr });
+        return res.status(500).json({ message: 'AI model error', error: stderr });
       }
       try {
         const feedback = JSON.parse(stdout);
         return res.status(200).json({ feedback });
       } catch (err) {
         console.error('Parse error:', err);
-        return res
-          .status(500)
-          .json({ message: 'Invalid model output', raw: stdout });
+        return res.status(500).json({ message: 'Invalid model output', raw: stdout });
       }
     });
+
   } catch (err) {
-    console.error(err);
+    console.error('SubmitAnswer error:', err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
 module.exports = { submitAnswer };
-
 
 // Add a new question (manual entry)
 const addQuestion = async (req, res) => {

@@ -40,7 +40,7 @@ export default function Editor({ question, type }) {
     setError("");
 
     try {
-      const payload = { answer, questionType: type };
+      const payload = { answer, questionType: type , question };
       const response = await axios.post(
         "http://localhost:5001/api/interview/submit-answer",
         payload,
