@@ -1,3 +1,4 @@
+
 export const NAVIGATE_TO_INVALID_ROUTES = '*';
 export const NAVIGATE_TO_HOME = '/';
 export const NAVIGATE_TO_LOGIN = '/login';
@@ -28,3 +29,6 @@ export const NAVIGATE_TO_PRIVACY = '/privacy';
 export const NAVIGATE_TO_TERMS = '/terms';
 export const NAVIGATE_TO_COMMUNITY_SUPPORT = "/community";
 export const NAVIGATE_TO_Interview= "/interview";
+export const NAVIGATE_TO_URGENT = '/community/urgent';
+
+

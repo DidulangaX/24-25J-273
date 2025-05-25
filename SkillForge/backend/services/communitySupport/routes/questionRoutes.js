@@ -11,4 +11,13 @@ router.get("/:id", questionController.getQuestionById);        // GET  /api/comm
 //router.post("/:id/like", authMiddleware.authenticateToken, questionController.likeQuestion); // POST /api/community/questions/:id/like - Like a question
 router.post("/:id/upvote", authMiddleware.authenticateToken, questionController.upvoteQuestion);
 router.post("/:id/downvote", authMiddleware.authenticateToken, questionController.downvoteQuestion);
+
+
+// GET /api/community/questions/urgent  → list only High-urgency
+router.get('/urgent', questionController.getUrgentQuestions);
+
+// GET /api/community/questions/urgent/count  → just return { count: N }
+router.get('/urgent/count', questionController.getUrgentCount);
 module.exports = router;
+
+

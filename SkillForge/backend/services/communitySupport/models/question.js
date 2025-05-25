@@ -23,6 +23,11 @@ const questionSchema = new mongoose.Schema({
     title: { type: String, required: true },
     content: { type: String, required: true },
     tags: [String],
+    urgency: {
+        type: String,
+        enum: ['Low', 'Medium', 'High'],
+        default: 'Low',
+    },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
    
@@ -34,3 +39,4 @@ const questionSchema = new mongoose.Schema({
 
 // Set the custom collection name to "communityquestions"
 module.exports = mongoose.model('Question', questionSchema, 'communityquestions');
+
