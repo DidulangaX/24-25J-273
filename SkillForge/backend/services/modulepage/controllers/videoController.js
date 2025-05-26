@@ -1638,6 +1638,352 @@ const getSequenceVideos = async (req, res) => {
   }
 };
 
+// Handle intervention feedback responses
+const handleInterventionFeedback = async (req, res) => {
+  try {
+    const {
+      userId,
+      videoId,
+      interventionType, // 'tabSwitch', 'pause', 'replay'
+      reason,
+      needsHelp,
+      comment,
+      helpType,
+      difficulty,
+      metadata,
+      sessionContext,
+      timestamp,
+    } = req.body;
+
+    console.log(
+      `📝 INTERVENTION FEEDBACK: ${interventionType} - ${reason} (User: ${userId}, Video: ${videoId})`
+    );
+
+    if (!userId || !videoId || !interventionType || !reason) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Missing required fields: userId, videoId, interventionType, or reason",
+      });
+    }
+
+    // Create intervention feedback record
+    const interventionFeedback = {
+      userId,
+      videoId,
+      interventionType,
+      reason,
+      needsHelp: needsHelp || false,
+      comment: comment || "",
+      helpType: helpType || null,
+      difficulty: difficulty || null,
+      metadata: metadata || {},
+      sessionContext: sessionContext || {},
+      timestamp: timestamp || new Date().toISOString(),
+      createdAt: new Date(),
+    };
+
+    // Save to database (adapt to your database system)
+    try {
+      // For MongoDB/Mongoose:
+      // const interventionDoc = new InterventionFeedback(interventionFeedback);
+      // await interventionDoc.save();
+
+      // For your existing UserInteraction model, you can extend it:
+      let userInteraction = await UserInteraction.findOne({ userId, videoId });
+
+      if (userInteraction) {
+        // Add intervention feedback to existing interaction
+        if (!userInteraction.interventionFeedback) {
+          userInteraction.interventionFeedback = [];
+        }
+        userInteraction.interventionFeedback.push(interventionFeedback);
+
+        // Update behavioral patterns based on intervention
+        updateBehavioralPatternsFromIntervention(
+          userInteraction,
+          interventionFeedback
+        );
+
+        userInteraction.updatedAt = Date.now();
+        await userInteraction.save();
+      } else {
+        // Create new interaction record with intervention
+        userInteraction = await UserInteraction.create({
+          userId,
+          videoId,
+          interventionFeedback: [interventionFeedback],
+          // Initialize other fields as needed
+          pauseCount: 0,
+          skipCount: 0,
+          replayCount: 0,
+          tabSwitchCount: sessionContext.tabSwitchCount || 0,
+          totalHiddenTime: sessionContext.totalHiddenTime || 0,
+          totalInactiveTime: sessionContext.totalInactiveTime || 0,
+          engagementMetrics: {
+            qualityScore: sessionContext.engagementScore || 100,
+          },
+        });
+      }
+
+      console.log(
+        `✅ Intervention feedback saved for ${interventionType}: ${reason}`
+      );
+    } catch (dbError) {
+      console.error("Database error saving intervention feedback:", dbError);
+      // Continue execution - don't fail the request due to DB issues
+    }
+
+    // Generate response based on help request
+    let response = {
+      success: true,
+      message: needsHelp
+        ? "Help request recorded - assistance provided"
+        : "Feedback recorded successfully",
+      interventionId: Date.now(), // or actual database ID
+      helpProvided: false,
+    };
+
+    // If user needs help, determine what help to provide
+    if (needsHelp && helpType) {
+      response.helpProvided = true;
+      response.helpAction = helpType;
+
+      switch (helpType) {
+        case "slow_down":
+          response.helpDescription =
+            "Video speed reduced to 0.75x for easier comprehension";
+          break;
+        case "replay_section":
+          response.helpDescription = "Previous 30 seconds will be replayed";
+          break;
+        case "show_summary":
+          response.helpDescription = "Key concepts summary is now available";
+          break;
+        case "pause_and_notes":
+          response.helpDescription = "Video paused for note-taking";
+          break;
+        default:
+          response.helpDescription = "Learning assistance has been activated";
+      }
+
+      console.log(`🆘 HELP PROVIDED: ${helpType} for ${interventionType}`);
+    }
+
+    // Track intervention analytics
+    await trackInterventionAnalytics(
+      interventionType,
+      reason,
+      needsHelp,
+      difficulty
+    );
+
+    return res.json(response);
+  } catch (error) {
+    console.error("Error handling intervention feedback:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to process intervention feedback",
+      error: error.message,
+    });
+  }
+};
+
+// Helper function to update behavioral patterns from intervention data
+const updateBehavioralPatternsFromIntervention = (
+  userInteraction,
+  interventionData
+) => {
+  try {
+    // Update help-seeking behavior
+    if (interventionData.needsHelp) {
+      userInteraction.behavioralPatterns.helpSeekingBehavior = true;
+    }
+
+    // Update note-taking behavior
+    if (interventionData.reason === "taking_notes") {
+      userInteraction.behavioralPatterns.noteTakingBehavior = true;
+    }
+
+    // Update learning style based on intervention patterns
+    if (
+      interventionData.interventionType === "pause" &&
+      interventionData.reason === "taking_notes"
+    ) {
+      userInteraction.behavioralPatterns.learningStyle = "break-heavy";
+    } else if (
+      interventionData.interventionType === "tabSwitch" &&
+      interventionData.reason === "search_help"
+    ) {
+      userInteraction.behavioralPatterns.learningStyle = "multitasking";
+    }
+
+    // Update difficulty perception in AI insights
+    if (interventionData.difficulty) {
+      if (!userInteraction.aiInsights) {
+        userInteraction.aiInsights = {};
+      }
+
+      userInteraction.aiInsights.userPerceivedDifficulty =
+        interventionData.difficulty;
+      userInteraction.aiInsights.confidenceLevel =
+        interventionData.difficulty === "hard" ? 0.8 : 0.6;
+
+      if (interventionData.difficulty === "hard") {
+        if (!userInteraction.aiInsights.riskFactors) {
+          userInteraction.aiInsights.riskFactors = [];
+        }
+        userInteraction.aiInsights.riskFactors.push(
+          `User reported difficulty with ${interventionData.interventionType}`
+        );
+      }
+    }
+
+    console.log("📊 Updated behavioral patterns from intervention data");
+  } catch (error) {
+    console.error("Error updating behavioral patterns:", error);
+  }
+};
+
+// Helper function to track intervention analytics
+const trackInterventionAnalytics = async (
+  interventionType,
+  reason,
+  needsHelp,
+  difficulty
+) => {
+  try {
+    // You can implement analytics tracking here
+    // This could feed into your AI model training data
+
+    const analyticsData = {
+      event: "intervention_response",
+      intervention_type: interventionType,
+      reason: reason,
+      needs_help: needsHelp,
+      difficulty: difficulty,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Log for now, but you could send to analytics service
+    console.log("📈 INTERVENTION ANALYTICS:", analyticsData);
+
+    // Optional: Send to external analytics service
+    // await analyticsService.track(analyticsData);
+  } catch (error) {
+    console.error("Error tracking intervention analytics:", error);
+  }
+};
+
+// Get intervention analytics for a video/user
+const getInterventionAnalytics = async (req, res) => {
+  try {
+    const { videoId, userId } = req.params;
+
+    if (!videoId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing videoId or userId parameter",
+      });
+    }
+
+    // Get user interaction with intervention feedback
+    const userInteraction = await UserInteraction.findOne({ userId, videoId })
+      .select(
+        "interventionFeedback behavioralPatterns engagementMetrics aiInsights"
+      )
+      .lean();
+
+    if (!userInteraction || !userInteraction.interventionFeedback) {
+      return res.json({
+        success: true,
+        analytics: {
+          totalInterventions: 0,
+          helpRequests: 0,
+          interventionTypes: {},
+          reasons: {},
+          difficultyBreakdown: {},
+          strugglingIndicators: {
+            frequentHelpRequests: false,
+            consistentDifficulty: false,
+            multipleInterventionTypes: false,
+          },
+        },
+      });
+    }
+
+    const interventions = userInteraction.interventionFeedback;
+
+    // Analyze intervention patterns
+    const analytics = {
+      totalInterventions: interventions.length,
+      helpRequests: interventions.filter((i) => i.needsHelp).length,
+      interventionTypes: {},
+      reasons: {},
+      difficultyBreakdown: { easy: 0, medium: 0, hard: 0 },
+      strugglingIndicators: {
+        frequentHelpRequests: false,
+        consistentDifficulty: false,
+        multipleInterventionTypes: false,
+      },
+      timeline: interventions.map((i) => ({
+        timestamp: i.timestamp,
+        type: i.interventionType,
+        reason: i.reason,
+        needsHelp: i.needsHelp,
+        difficulty: i.difficulty,
+      })),
+    };
+
+    // Count intervention types and reasons
+    interventions.forEach((intervention) => {
+      // Count by type
+      analytics.interventionTypes[intervention.interventionType] =
+        (analytics.interventionTypes[intervention.interventionType] || 0) + 1;
+
+      // Count by reason
+      analytics.reasons[intervention.reason] =
+        (analytics.reasons[intervention.reason] || 0) + 1;
+
+      // Count by difficulty
+      if (intervention.difficulty) {
+        analytics.difficultyBreakdown[intervention.difficulty]++;
+      }
+    });
+
+    // Determine struggling indicators
+    analytics.strugglingIndicators.frequentHelpRequests =
+      analytics.helpRequests >= 3;
+    analytics.strugglingIndicators.consistentDifficulty =
+      analytics.difficultyBreakdown.hard >= 2;
+    analytics.strugglingIndicators.multipleInterventionTypes =
+      Object.keys(analytics.interventionTypes).length >= 2;
+
+    console.log(
+      `📊 Generated intervention analytics for user ${userId}, video ${videoId}:`,
+      {
+        total: analytics.totalInterventions,
+        helpRequests: analytics.helpRequests,
+        struggling:
+          analytics.strugglingIndicators.frequentHelpRequests ||
+          analytics.strugglingIndicators.consistentDifficulty,
+      }
+    );
+
+    return res.json({
+      success: true,
+      analytics,
+    });
+  } catch (error) {
+    console.error("Error getting intervention analytics:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve intervention analytics",
+      error: error.message,
+    });
+  }
+};
+
 // Export all functions
 module.exports = {
   getVideos,
@@ -1658,4 +2004,6 @@ module.exports = {
   recordTabSwitchFeedback,
   getUserSessions,
   getSequenceVideos,
+  handleInterventionFeedback,
+  getInterventionAnalytics,
 };

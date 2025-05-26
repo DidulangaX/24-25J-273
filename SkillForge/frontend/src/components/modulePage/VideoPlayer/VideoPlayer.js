@@ -1,9 +1,10 @@
-// src/components/modulePage/VideoPlayer/VideoPlayer.js
+//src/components/modulePage/VideoPlayer/VideoPlayer.js
 import React, { useRef, useState, useEffect } from "react";
 import InactivityNotification from "../InactivityNotification/InactivityNotification";
 import InactiveSessionNotification from "../InactivityNotification/InactiveSessionNotification";
 import ExitModal from "../ExitModal/ExitModal";
-import useBehavioralTracking from "../../../hooks/useBehavioralTracking";
+import InteractionGuidance from "../InteractionGuidance/InteractionGuidance"; // 🆕 Enhanced component
+import useBehavioralTracking from "../../../hooks/useBehavioralTracking"; // 🆕 Enhanced hook
 import axios from "axios";
 import {
   Box,
@@ -70,20 +71,26 @@ import {
   FaLock,
 } from "react-icons/fa";
 
-const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
+const VideoPlayer = ({
+  videoId,
+  videoUrl,
+  userId,
+  videoTitle,
+  onInteractionUpdate,
+}) => {
   const videoRef = useRef(null);
   const toast = useToast();
 
-  // Add ref to track if seek is programmatic (to prevent double tracking)
+  // Seek tracking ref (keep existing)
   const seekTrackingRef = useRef({
     isProgrammaticSeek: false,
     lastSeekTime: 0,
     lastTrackedPosition: 0,
   });
 
-  // 🆕 Use the enhanced behavioral tracking hook with exit detection
+  // 🆕 Use the enhanced behavioral tracking hook
   const {
-    // State from hook
+    // State from hook (for your AI model)
     behavioralData,
     isTabVisible,
     isUserActive,
@@ -91,24 +98,34 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     browserSwitchCount,
     totalHiddenTime,
     totalInactiveTime,
+
     // Computed values from hook
     engagementScore,
     attentionQuality,
     distractionLevel,
+
+    // 🆕 Intervention system
+    interventionTriggers,
+    handleInterventionResponse,
+    closeInterventionPrompt,
+
     // Actions from hook
-    recordTabSwitchReason,
+    trackVideoInteraction,
     sendTrackingData,
+    recordTabSwitchReason,
     closeTabSwitchModal,
+
     // Inactivity actions
     handleInactivityResponse,
     handleInactivityTimeout,
     closeInactivityNotification,
+
     // Modal flags from hook
     shouldShowTabSwitchModal,
-    // Inactivity notification flag
     shouldShowInactivityNotification,
     isAwaitingInactivityResponse,
-    // 🆕 EXIT DETECTION from hook
+
+    // Exit detection from hook
     showExitModal,
     exitReason,
     exitComment,
@@ -123,7 +140,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     getSessionDuration,
   } = useBehavioralTracking(videoId, userId, videoRef);
 
-  // Video-specific state (only what's needed for video controls)
+  // Video-specific state (keep existing)
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -134,7 +151,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
   const [controlTimeout, setControlTimeout] = useState(null);
   const [loadingState, setLoadingState] = useState("initial");
 
-  // Video interaction tracking (separate from behavioral tracking)
+  // Video interaction tracking (keep existing)
   const [interactionCount, setInteractionCount] = useState(0);
   const [interactionTooltip, setInteractionTooltip] = useState(false);
   const [showMetricsTooltip, setShowMetricsTooltip] = useState(false);
@@ -145,13 +162,11 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     sessionStartTime: Date.now(),
   });
 
-  // Form states for feedback
+  // Form states for tab switch feedback (keep existing for backward compatibility)
   const [tabSwitchReason, setTabSwitchReason] = useState("");
   const [tabSwitchComment, setTabSwitchComment] = useState("");
 
-  const cancelRef = useRef();
-
-  // UI colors
+  // UI colors (keep existing)
   const controlsBg = useColorModeValue("blackAlpha.700", "blackAlpha.800");
   const sliderColor = useColorModeValue("blue.500", "blue.300");
   const timeColor = useColorModeValue("white", "gray.100");
@@ -159,12 +174,11 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
   const metricsTooltipBg = useColorModeValue("white", "gray.800");
   const metricsTooltipBorder = useColorModeValue("gray.200", "gray.600");
 
-  // Initial setup when videoId changes
+  // Initial setup when videoId changes (keep existing)
   useEffect(() => {
     if (videoId) {
       clearPreviousSession();
       resetVideoMetrics();
-      // Reset seek tracking when video changes
       seekTrackingRef.current = {
         isProgrammaticSeek: false,
         lastSeekTime: 0,
@@ -176,7 +190,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     };
   }, [videoId]);
 
-  // Update parent component with combined metrics
+  // Update parent component with combined metrics (enhanced)
   useEffect(() => {
     if (onInteractionUpdate) {
       const combinedData = {
@@ -186,6 +200,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         replayEvents: videoMetrics.replayEvents,
         seekForwardEvents: videoMetrics.seekForwardEvents,
         lastPosition: currentTime,
+
         // Behavioral metrics from hook
         tabSwitchCount,
         browserSwitchCount,
@@ -196,8 +211,12 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         engagementScore,
         attentionQuality,
         distractionLevel,
+
         // Combined behavioral data
         behavioralData,
+
+        // 🆕 Intervention state for analytics
+        interventionTriggers,
       };
       onInteractionUpdate(combinedData);
     }
@@ -215,10 +234,11 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     attentionQuality,
     distractionLevel,
     behavioralData,
+    interventionTriggers,
     onInteractionUpdate,
   ]);
 
-  // Helper functions
+  // Helper functions (keep existing)
   const resetVideoMetrics = () => {
     setVideoMetrics({
       totalPauses: 0,
@@ -248,11 +268,9 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
           userId,
           videoId,
           combinedMetrics: {
-            // Video metrics
             totalPauses: videoMetrics.totalPauses,
             replayEvents: videoMetrics.replayEvents,
             seekForwardEvents: videoMetrics.seekForwardEvents,
-            // Behavioral metrics
             totalHiddenTime,
             totalInactiveTime,
             tabSwitchCount,
@@ -268,15 +286,14 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Video interaction tracking with seek deduplication
-  const trackVideoInteraction = async (type, data = {}) => {
+  // 🆕 Enhanced video interaction tracking (with intervention checks)
+  const trackVideoInteractionEnhanced = async (type, data = {}) => {
     try {
-      // Skip if this is a duplicate seek event
+      // Skip duplicate seek events
       if (type === "seek") {
         const now = Date.now();
         const position = videoRef.current ? videoRef.current.currentTime : 0;
 
-        // Check if this is a duplicate seek event (within 100ms and same position)
         if (
           now - seekTrackingRef.current.lastSeekTime < 100 &&
           Math.abs(position - seekTrackingRef.current.lastTrackedPosition) < 0.1
@@ -285,15 +302,12 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
           return;
         }
 
-        // Update tracking reference
         seekTrackingRef.current.lastSeekTime = now;
         seekTrackingRef.current.lastTrackedPosition = position;
       }
 
       setInteractionTooltip(true);
       setTimeout(() => setInteractionTooltip(false), 1500);
-
-      const position = videoRef.current ? videoRef.current.currentTime : 0;
 
       // Update local video metrics
       setVideoMetrics((prev) => {
@@ -310,20 +324,15 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         return newMetrics;
       });
 
-      // Use the sendTrackingData from the behavioral hook
-      await sendTrackingData(type, {
-        position,
-        timestamp: new Date().toISOString(),
-        ...data,
-      });
-
+      // 🆕 Use enhanced tracking from hook (includes intervention checks)
+      await trackVideoInteraction(type, data);
       setInteractionCount((prev) => prev + 1);
     } catch (error) {
       console.error(`Error tracking ${type} interaction:`, error);
     }
   };
 
-  // Submit tab switch feedback using hook
+  // Submit tab switch feedback using hook (keep existing for backward compatibility)
   const handleTabSwitchSubmit = async () => {
     if (!tabSwitchReason) {
       toast({
@@ -343,7 +352,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         duration: 3000,
         isClosable: true,
       });
-      // Reset form
       setTabSwitchReason("");
       setTabSwitchComment("");
     } catch (error) {
@@ -358,23 +366,21 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     }
   };
 
-  // Handle inactivity resume using hook data
+  // Handle inactivity resume using hook data (keep existing)
   const handleResumeFromInactivity = () => {
     console.log("🎵 Manual resume from inactivity notification");
 
-    // Resume video playback
     if (videoRef.current && videoRef.current.paused) {
       videoRef.current.play();
       console.log("🎵 Video manually resumed");
     }
 
-    // Trigger activity to reset the inactivity system
     if (document.dispatchEvent) {
       document.dispatchEvent(new Event("mousemove"));
     }
   };
 
-  // Video control functions
+  // Video control functions (keep existing)
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds < 0) return "00:00";
     const minutes = Math.floor(seconds / 60);
@@ -414,15 +420,12 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     if (videoRef.current) {
       const prevPosition = videoRef.current.currentTime;
 
-      // Set flag to indicate this is a programmatic seek
       seekTrackingRef.current.isProgrammaticSeek = true;
-
       videoRef.current.currentTime = value;
       setCurrentTime(value);
 
-      // Only track if the seek is significant (> 1 second difference)
       if (Math.abs(value - prevPosition) > 1) {
-        trackVideoInteraction("seek", {
+        trackVideoInteractionEnhanced("seek", {
           direction: value > prevPosition ? "forward" : "backward",
           prevPosition,
           skipAmount: Math.abs(value - prevPosition),
@@ -430,7 +433,6 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         });
       }
 
-      // Reset flag after a short delay
       setTimeout(() => {
         seekTrackingRef.current.isProgrammaticSeek = false;
       }, 50);
@@ -441,17 +443,14 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     if (videoRef.current) {
       const newPosition = Math.min(videoRef.current.currentTime + 10, duration);
 
-      // Set flag to indicate this is a programmatic seek
       seekTrackingRef.current.isProgrammaticSeek = true;
-
       videoRef.current.currentTime = newPosition;
-      trackVideoInteraction("seek", {
+      trackVideoInteractionEnhanced("seek", {
         direction: "forward",
         skipAmount: 10,
         source: "skip_button",
       });
 
-      // Reset flag after a short delay
       setTimeout(() => {
         seekTrackingRef.current.isProgrammaticSeek = false;
       }, 50);
@@ -462,17 +461,14 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     if (videoRef.current) {
       const newPosition = Math.max(videoRef.current.currentTime - 10, 0);
 
-      // Set flag to indicate this is a programmatic seek
       seekTrackingRef.current.isProgrammaticSeek = true;
-
       videoRef.current.currentTime = newPosition;
-      trackVideoInteraction("seek", {
+      trackVideoInteractionEnhanced("seek", {
         direction: "backward",
         skipAmount: 10,
         source: "skip_button",
       });
 
-      // Reset flag after a short delay
       setTimeout(() => {
         seekTrackingRef.current.isProgrammaticSeek = false;
       }, 50);
@@ -497,11 +493,11 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
   const changePlaybackSpeed = (speed) => {
     if (videoRef.current) {
       videoRef.current.playbackRate = speed;
-      trackVideoInteraction("speed", { speed });
+      trackVideoInteractionEnhanced("speed", { speed });
     }
   };
 
-  // Time update tracking
+  // Time update tracking (keep existing)
   useEffect(() => {
     const updateTime = () => {
       if (videoRef.current) {
@@ -532,7 +528,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
     };
   }, []);
 
-  // Controls visibility
+  // Controls visibility (keep existing)
   useEffect(() => {
     const handleMouseMove = () => {
       setShowControls(true);
@@ -558,7 +554,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
 
   return (
     <>
-      {/* 🆕 Debug info - shows exit detection status */}
+      {/* Debug info - shows engagement and intervention status */}
       {process.env.NODE_ENV === "development" && (
         <Box
           position="fixed"
@@ -571,8 +567,15 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
           fontSize="xs"
           zIndex={9999}
         >
-          Exit Detection: ✅ Active | Attempts: {exitAttempts} | Duration:{" "}
-          {formatDuration(getSessionDuration())}
+          <Text>
+            Engagement: {engagementScore}% | Switches: {tabSwitchCount}
+          </Text>
+          <Text>
+            Duration: {formatDuration(getSessionDuration())} | Interventions:{" "}
+            {(interventionTriggers?.shouldShowTabSwitchPrompt ? 1 : 0) +
+              (interventionTriggers?.shouldShowPausePrompt ? 1 : 0) +
+              (interventionTriggers?.shouldShowReplayPrompt ? 1 : 0)}
+          </Text>
         </Box>
       )}
 
@@ -594,19 +597,19 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
           onClick={togglePlay}
           onPlay={() => {
             setIsPlaying(true);
-            trackVideoInteraction("play");
+            trackVideoInteractionEnhanced("play");
           }}
           onPause={() => {
             setIsPlaying(false);
-            trackVideoInteraction("pause");
+            trackVideoInteractionEnhanced("pause");
           }}
           onRateChange={() => {
             const speed = videoRef.current ? videoRef.current.playbackRate : 1;
-            trackVideoInteraction("speed", { speed });
+            trackVideoInteractionEnhanced("speed", { speed });
           }}
           onEnded={() => {
             setIsPlaying(false);
-            trackVideoInteraction("end");
+            trackVideoInteractionEnhanced("end");
             endSession();
             toast({
               title: "Video completed!",
@@ -685,7 +688,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
                 border="2px solid"
                 borderColor="whiteAlpha.400"
               >
-                <Icon as={FaPause} boxSize={8} />
+                <Icon as={FaPauseCircle} boxSize={8} />
               </Circle>
               <VStack spacing={2}>
                 <Text fontSize="xl" fontWeight="bold">
@@ -943,6 +946,42 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
                       />
                     </Box>
                     <Divider my={2} />
+
+                    {/* 🆕 Intervention Status */}
+                    {interventionTriggers && (
+                      <>
+                        <VStack align="stretch" spacing={2} fontSize="sm">
+                          <Text fontWeight="bold">
+                            🚨 Smart Assistance Status:
+                          </Text>
+                          <HStack justify="space-between">
+                            <Text>Active Interventions:</Text>
+                            <Badge colorScheme="blue">
+                              {(interventionTriggers.shouldShowTabSwitchPrompt
+                                ? 1
+                                : 0) +
+                                (interventionTriggers.shouldShowPausePrompt
+                                  ? 1
+                                  : 0) +
+                                (interventionTriggers.shouldShowReplayPrompt
+                                  ? 1
+                                  : 0)}
+                            </Badge>
+                          </HStack>
+                          {interventionTriggers.currentInterventionData && (
+                            <Text fontSize="xs" color="gray.500">
+                              Last trigger:{" "}
+                              {
+                                interventionTriggers.currentInterventionData
+                                  .type
+                              }
+                            </Text>
+                          )}
+                        </VStack>
+                        <Divider my={2} />
+                      </>
+                    )}
+
                     {/* Attention Metrics */}
                     <VStack align="stretch" spacing={2} fontSize="sm">
                       <HStack justify="space-between">
@@ -1072,7 +1111,32 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         </Fade>
       </Box>
 
-      {/* Tab Switch Modal */}
+      {/* 🆕 ENHANCED INTERVENTION SYSTEM */}
+      <InteractionGuidance
+        interactionData={{
+          interactionCount,
+          totalPauses: videoMetrics.totalPauses,
+          replayEvents: videoMetrics.replayEvents,
+          seekForwardEvents: videoMetrics.seekForwardEvents,
+          lastPosition: currentTime,
+          tabSwitchCount,
+          engagementScore,
+          attentionQuality,
+          distractionLevel,
+        }}
+        videoPosition={currentTime}
+        onAction={(actionType) => {
+          // Handle legacy action types for backward compatibility
+          console.log("InteractionGuidance action:", actionType);
+        }}
+        // 🆕 New props for enhanced intervention system
+        interventionTriggers={interventionTriggers}
+        handleInterventionResponse={handleInterventionResponse}
+        closeInterventionPrompt={closeInterventionPrompt}
+        videoTitle={videoTitle}
+      />
+
+      {/* Tab Switch Modal (keep existing for backward compatibility) */}
       <Modal
         isOpen={shouldShowTabSwitchModal}
         onClose={() => {
@@ -1217,7 +1281,7 @@ const VideoPlayer = ({ videoId, videoUrl, userId, onInteractionUpdate }) => {
         />
       )}
 
-      {/* 🆕 SIMPLE EXIT MODAL - Integrated directly with hook */}
+      {/* Exit Modal - Integrated directly with hook */}
       <ExitModal
         isOpen={showExitModal}
         onClose={handleContinueLearning}
