@@ -19,5 +19,3 @@ router.get('/urgent', questionController.getUrgentQuestions);
 // GET /api/community/questions/urgent/count  → just return { count: N }
 router.get('/urgent/count', questionController.getUrgentCount);
 module.exports = router;
-
-
