@@ -13,6 +13,7 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.0.3",
     "nodemon": "^2.0.22",
+    "openai": "^4.103.0",
     "validator": "^13.9.0"
   },
   "scripts": {

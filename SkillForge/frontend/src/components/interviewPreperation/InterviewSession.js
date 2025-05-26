@@ -31,6 +31,7 @@ export default function InterviewSession() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setQuestions(res.data.questions);
+        console.log("Fetched questions:", res.data.questions);
       } catch {
       } finally {
         setLoading(false);
