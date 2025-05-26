@@ -30,7 +30,7 @@ const questionSchema = new mongoose.Schema({
     },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
-   
+    isNotified: { type: Boolean, default: false },
     upvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],     // ADD upvotes field
     downvotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],   // ADD downvotes field
     peerMatchRequested: { type: Boolean, default: false },

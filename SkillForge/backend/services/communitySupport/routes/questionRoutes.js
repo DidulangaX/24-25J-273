@@ -16,6 +16,10 @@ router.post("/:id/downvote", authMiddleware.authenticateToken, questionControlle
 // GET /api/community/questions/urgent  → list only High-urgency
 router.get('/urgent', questionController.getUrgentQuestions);
 
+router.patch('/questions/:id/notification', questionController.updateNotificationStatus);
+
+
+
 // GET /api/community/questions/urgent/count  → just return { count: N }
 router.get('/urgent/count', questionController.getUrgentCount);
 module.exports = router;

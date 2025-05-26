@@ -125,6 +125,24 @@ const getQuestionById = async (req, res) => {
   }
 };
 
+const updateNotificationStatus = async (req, res) => {
+    console.log('Updating notification status for question ID:', req.params.id);
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    question.isNotified = true; // update the field
+    await question.save(); // save changes
+
+    return res.json({ message: 'Notification status updated', question });
+  } catch (error) {
+    console.error('Error updating notification status:', error);
+    return res.status(500).json({ message: 'Error updating notification status', error: error.message });
+  }
+};
+
 const upvoteQuestion = async (req, res) => {
   try {
     const question = await Question.findById(req.params.id);
@@ -186,5 +204,6 @@ module.exports = {
   upvoteQuestion,
   downvoteQuestion,
   getUrgentQuestions,
-  getUrgentCount
+  getUrgentCount,
+  updateNotificationStatus
 };

@@ -39,3 +39,24 @@ export default function useUserAuthInfo() {
   return userDetails;
 };
 
+export async function submitQuestionAnswer(question, answer) {
+  try {
+    const response = await axios.post(
+      'https://vgsznu2ga0.execute-api.us-east-1.amazonaws.com/theory',
+      {
+        question,
+        answer,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting question and answer:', error.message);
+    throw error;
+  }
+}
+

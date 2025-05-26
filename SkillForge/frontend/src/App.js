@@ -55,6 +55,7 @@ import { Admin, Instructor, Student } from './enums/enums';
 import { handleLogout } from './utils/utility';
 import Error from './components/404/error';
 import theme from './theme';
+import QuestionNotifier from './components/communitysupport/QuestionNotifier';
 
 function ColorModeSwitcher() {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -102,6 +103,7 @@ export default function App() {
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <BrowserRouter>
         <Navbar />
+        <QuestionNotifier />
         <Box minH="100vh" p={4}>
           <ColorModeSwitcher />
 
@@ -116,76 +118,30 @@ export default function App() {
               path={NAVIGATE_TO_REGISTER}
               element={!isLoggedIn ? <Register /> : <Home />}
             />
-            <Route
-              path={NAVIGATE_TO_COURSE_PAGE}
-              element={<CoursePage />}
-            />
-            <Route
-              path={NAVIGATE_TO_INVALID_ROUTES}
-              element={<Error />}
-            />
-            <Route
-              path={NAVIGATE_TO_COMMUNITY_SUPPORT}
-              element={<CommunitySupportPage />}
-            />
+            <Route path={NAVIGATE_TO_COURSE_PAGE} element={<CoursePage />} />
+            <Route path={NAVIGATE_TO_INVALID_ROUTES} element={<Error />} />
+            <Route path={NAVIGATE_TO_COMMUNITY_SUPPORT} element={<CommunitySupportPage />} />
             <Route path="/interview" element={<InterviewPractice />} />
-            <Route
-              path="/start-interview"
-              element={<InterviewSession />}
-            />
-            <Route
-              path="/community/questions/:questionId"
-              element={<QuestionDetailPage />}
-            />
+            <Route path="/start-interview" element={<InterviewSession />} />
+            <Route path="/community/questions/:questionId" element={<QuestionDetailPage />} />
 
             {/* Protected */}
-            <Route
-              path={NAVIGATE_TO_COURSE}
-              element={isLoggedIn && isStudent ? <Course /> : <Error />}
-            />
-            <Route
-              path={NAVIGATE_TO_PROFILE}
-              element={isLoggedIn && isStudent ? <Profile /> : <Error />}
-            />
-            <Route
-              path={NAVIGATE_TO_PAYMENTS}
-              element={isLoggedIn && isStudent ? <Payment /> : <Error />}
-            />
-            <Route
-              path={NAVIGATE_TO_SUCCESS_PAYMENT}
-              element={
-                isLoggedIn && isStudent ? <PaymentSuccess /> : <Error />
-              }
-            />
+            <Route path={NAVIGATE_TO_COURSE} element={isLoggedIn && isStudent ? <Course /> : <Error />} />
+            <Route path={NAVIGATE_TO_PROFILE} element={isLoggedIn && isStudent ? <Profile /> : <Error />} />
+            <Route path={NAVIGATE_TO_PAYMENTS} element={isLoggedIn && isStudent ? <Payment /> : <Error />} />
+            <Route path={NAVIGATE_TO_SUCCESS_PAYMENT} element={isLoggedIn && isStudent ? <PaymentSuccess /> : <Error />} />
 
             {/* Admin/Instructor */}
             <Route
               path={NAVIGATE_TO_ADMIN_PROFILE}
-              element={
-                isLoggedIn && (isAdmin || isInstructor)
-                  ? <Dashboard />
-                  : <Error />
-              }
+              element={isLoggedIn && (isAdmin || isInstructor) ? <Dashboard /> : <Error />}
             />
-            <Route
-              path={NAVIGATE_TO_ADD_COURSE}
-              element={isLoggedIn && isAdmin ? <AddCourse /> : <Error />}
-            />
-            <Route
-              path={NAVIGATE_TO_UPDATE_COURSE}
-              element={isLoggedIn && isAdmin ? <UpdateCourse /> : <Error />}
-            />
-            <Route
-              path={NAVIGATE_TO_UPDATE_CONTENT}
-              element={isLoggedIn && isInstructor ? <UpdateContent /> : <Error />}
-            />
+            <Route path={NAVIGATE_TO_ADD_COURSE} element={isLoggedIn && isAdmin ? <AddCourse /> : <Error />} />
+            <Route path={NAVIGATE_TO_UPDATE_COURSE} element={isLoggedIn && isAdmin ? <UpdateCourse /> : <Error />} />
+            <Route path={NAVIGATE_TO_UPDATE_CONTENT} element={isLoggedIn && isInstructor ? <UpdateContent /> : <Error />} />
             <Route
               path={NAVIGATE_TO_ADD_COURSE_CONTENTS}
-              element={
-                isLoggedIn && (isAdmin || isInstructor)
-                  ? <AddCourseContents />
-                  : <Error />
-              }
+              element={isLoggedIn && (isAdmin || isInstructor) ? <AddCourseContents /> : <Error />}
             />
           </Routes>
         </Box>

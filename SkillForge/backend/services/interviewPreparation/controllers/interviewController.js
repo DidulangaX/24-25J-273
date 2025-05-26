@@ -4,12 +4,10 @@ const path = require('path');
 const { spawn } = require('child_process');
 const InterviewQuestion = require('../models/InterviewQuestion');
 const axios = require('axios');
-const { theory } = require('./theory'); // Corrected import
 const FLASH_ENDPOINT = process.env.GEMINI_FLASH_ENDPOINT;
 const FLASH_KEY      = process.env.GEMINI_API_KEY;
 
-
-// Submit answer (theory via ChatGPT + local model; coding via local model)
+// Submit answer (local model; coding via local model)
 const submitAnswer = async (req, res) => {
   try {
     const { question, answer, questionType } = req.body;
@@ -18,16 +16,12 @@ const submitAnswer = async (req, res) => {
     }
 
     let gptFeedback = null;
-    // For theory questions, call ChatGPT first
-    if (questionType === 'theory') {
-      gptFeedback = theory(question, answer);
-    }
 
     // Determine local scoring script
     const scriptFile = questionType === 'coding'
       ? 'logicalErrorModel.py'
       : 'theoryAnswerChecker.py';
-    console.log(`Using local model script: ${scriptFile}`);
+    
     const scriptPath = path.join(__dirname, '../models', scriptFile);
 
     const args = questionType === 'coding'
@@ -35,7 +29,6 @@ const submitAnswer = async (req, res) => {
       : [scriptPath, question, answer];
 
     const pythonProcess = spawn('python', args);
-    console.log(`Running local model with args: ${args.join(' ')}`);
     let stdout = '', stderr = '';
     pythonProcess.stdout.on('data', data => { stdout += data.toString(); });
     pythonProcess.stderr.on('data', data => { stderr += data.toString(); });
@@ -55,7 +48,6 @@ const submitAnswer = async (req, res) => {
 
       // Return GPT feedback as primary, include local as secondary
       return res.status(200).json({
-        gptFeedback,
         modelFeedback
       });
     });

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { useToast } from "@chakra-ui/react";
+import { submitQuestionAnswer } from "../authentication/useUserAuthInfo";
 
 export default function Editor({ question , type }) {
   const [answer, setAnswer] = useState("");
@@ -86,12 +87,12 @@ export default function Editor({ question , type }) {
         payload,
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
-
       if (type === "coding") {
-        console.log("Coding feedback:", data.modelFeedback);
         setFeedback(data.modelFeedback || []);
       } else {
-        setFeedback([data.gptFeedback]);
+        const result = await submitQuestionAnswer(question, answer);
+        setFeedback([result]);
+
       }
 
       toast({

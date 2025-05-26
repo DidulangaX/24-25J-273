@@ -10,7 +10,6 @@ const bodyParser = require('body-parser');
 const questionRoutes       = require('./routes/questionRoutes');
 const answerRoutes         = require('./routes/answerRoutes');
 const questionAnswerRoutes = require('./routes/questionAnswerRoutes');
-const notificationRoutes = require('./routes/notificationRoutes');
 
 const PORT = process.env.PORT || 5002;
 
@@ -36,7 +35,7 @@ async function startService() {
     app.use('/api/community/questions', questionRoutes);
     app.use('/api/community/answers',   answerRoutes);
     app.use('/api/community/questions', questionAnswerRoutes);
-    app.use('/api/notifications', notificationRoutes);
+
 
     app.listen(PORT, () => {
       console.log(`🚀 Community Support Service is running on port ${PORT}`);
