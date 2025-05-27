@@ -99,7 +99,11 @@ export default function App() {
         <Route
           path={NAVIGATE_TO_ADMIN_PROFILE}
           element={
-            isLoggedIn && (isAdmin || isInstructor) ? <Dashboard /> : <Error />
+            isLoggedIn && (isAdmin || isInstructor) ? (
+              <ModuleDashboard />
+            ) : (
+              <Error />
+            )
           }
         />
         <Route

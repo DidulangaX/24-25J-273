@@ -134,11 +134,6 @@ const ExitModal = ({
               </HStack>
             </HStack>
 
-            <Text color="gray.700" textAlign="center">
-              We'd love to understand why you're leaving to help improve your
-              learning experience.
-            </Text>
-
             {/* Exit Reason Selection */}
             <Box>
               <Text fontWeight="medium" mb={3} color="gray.800">
@@ -171,26 +166,6 @@ const ExitModal = ({
                       <Text fontWeight="medium">Got what I needed</Text>
                       <Text fontSize="sm" color="gray.500">
                         Learned enough for my current goal
-                      </Text>
-                    </Box>
-                  </Radio>
-
-                  <Radio value="distraction_interruption" colorScheme="purple">
-                    <Box>
-                      <Text fontWeight="medium">
-                        Distraction or interruption
-                      </Text>
-                      <Text fontSize="sm" color="gray.500">
-                        Work, personal, or environmental interruption
-                      </Text>
-                    </Box>
-                  </Radio>
-
-                  <Radio value="other" colorScheme="purple">
-                    <Box>
-                      <Text fontWeight="medium">Other reason</Text>
-                      <Text fontSize="sm" color="gray.500">
-                        Something else not listed above
                       </Text>
                     </Box>
                   </Radio>

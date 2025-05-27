@@ -199,20 +199,7 @@ const InteractionGuidance = ({
             icon: FaClock,
             color: "yellow",
           },
-          {
-            value: "technical_terms",
-            label: "Technical terms unclear",
-            description: "Looking up definitions",
-            icon: FaBookOpen,
-            color: "purple",
-          },
-          {
-            value: "need_examples",
-            label: "Need more examples",
-            description: "Want practical demonstrations",
-            icon: FaLightbulb,
-            color: "blue",
-          },
+
           {
             value: "distracted",
             label: "Got distracted",

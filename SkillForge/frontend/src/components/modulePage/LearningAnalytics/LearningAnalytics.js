@@ -93,8 +93,8 @@ import {
   FaRegEyeSlash,
   FaUserClock,
   FaTachometerAlt,
-  FaBullseye, // This replaces FaTarget
-  FaCrosshairs, // This replaces FaFocus - better alternative for focus concept
+  FaBullseye,
+  FaCrosshairs,
   FaMobile,
   FaDesktop,
   FaTablet,
@@ -168,13 +168,15 @@ const EnhancedLearningAnalytics = ({ videoId, userId }) => {
       console.log("Enhanced difficulty analysis response:", response.data);
 
       if (response.data && response.data.success) {
-        setAnalytics(response.data);
+        // Process and enhance the analytics data
+        const enhancedData = enhanceAnalyticsData(response.data);
+        setAnalytics(enhancedData);
 
         // Fetch section-specific resources if problematic sections exist
-        if (response.data.interactionSummary?.problematic_sections) {
+        if (enhancedData.interactionSummary?.problematic_sections) {
           await fetchSectionResources(
             videoId,
-            response.data.interactionSummary.problematic_sections
+            enhancedData.interactionSummary.problematic_sections
           );
         }
       } else {
@@ -194,6 +196,97 @@ const EnhancedLearningAnalytics = ({ videoId, userId }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Enhanced data processing function
+  const enhanceAnalyticsData = (rawData) => {
+    const summary = rawData.interactionSummary || {};
+
+    // Calculate engagement quality score
+    const engagementScore = calculateEngagementScore(summary);
+
+    // Calculate attention quality
+    const attentionQuality = calculateAttentionQuality(summary);
+
+    // Calculate distraction level
+    const distractionLevel = calculateDistractionLevel(summary);
+
+    return {
+      ...rawData,
+      interactionSummary: {
+        ...summary,
+        engagement_quality_score: engagementScore,
+        attentionQuality: attentionQuality,
+        distractionLevel: distractionLevel,
+      },
+    };
+  };
+
+  // Calculate engagement quality score (0-100)
+  const calculateEngagementScore = (summary) => {
+    let score = 100;
+
+    // Penalize high pause rate (more than 3 pauses per minute is concerning)
+    const pauseRate = summary.pause_rate || 0;
+    if (pauseRate > 5) score -= 30;
+    else if (pauseRate > 3) score -= 15;
+    else if (pauseRate > 1) score -= 5;
+
+    // Penalize excessive tab switching (more than 2 per minute)
+    const tabSwitchRate = summary.tab_switch_frequency || 0;
+    if (tabSwitchRate > 5) score -= 25;
+    else if (tabSwitchRate > 2) score -= 10;
+
+    // Penalize low tab visibility
+    const tabVisibility = summary.tab_visibility_ratio || 1;
+    if (tabVisibility < 0.7) score -= 20;
+    else if (tabVisibility < 0.85) score -= 10;
+
+    // Penalize exit attempts
+    const exitAttempts = summary.session_exit_attempts || 0;
+    score -= exitAttempts * 15;
+
+    // Reward good active viewing ratio
+    const activeRatio = summary.active_viewing_ratio || 1;
+    if (activeRatio > 0.9) score += 10;
+
+    // Penalize excessive replaying (might indicate confusion)
+    const replayRatio = summary.replay_ratio || 0;
+    if (replayRatio > 0.5) score -= 15;
+    else if (replayRatio > 0.3) score -= 8;
+
+    return Math.max(0, Math.min(100, score));
+  };
+
+  // Calculate attention quality based on engagement metrics
+  const calculateAttentionQuality = (summary) => {
+    const engagementScore = calculateEngagementScore(summary);
+
+    if (engagementScore >= 85) return "Excellent";
+    if (engagementScore >= 70) return "Good";
+    if (engagementScore >= 50) return "Fair";
+    if (engagementScore >= 30) return "Needs Improvement";
+    return "Poor";
+  };
+
+  // Calculate distraction level
+  const calculateDistractionLevel = (summary) => {
+    const tabSwitchRate = summary.tab_switch_frequency || 0;
+    const tabVisibility = summary.tab_visibility_ratio || 1;
+    const exitAttempts = summary.session_exit_attempts || 0;
+
+    // High distraction indicators
+    if (tabSwitchRate > 5 || tabVisibility < 0.6 || exitAttempts > 2) {
+      return "High";
+    }
+
+    // Medium distraction indicators
+    if (tabSwitchRate > 2 || tabVisibility < 0.8 || exitAttempts > 0) {
+      return "Medium";
+    }
+
+    // Low distraction
+    return "Low";
   };
 
   // Fetch resources for problematic sections
@@ -558,13 +651,15 @@ const EnhancedLearningAnalytics = ({ videoId, userId }) => {
                       ? "blue"
                       : summary?.attentionQuality === "Fair"
                       ? "yellow"
+                      : summary?.attentionQuality === "Needs Improvement"
+                      ? "orange"
                       : "red"
                   }
                   fontSize="md"
                   px={3}
                   py={1}
                 >
-                  {summary?.attentionQuality || "Unknown"}
+                  {summary?.attentionQuality || "Fair"}
                 </Badge>
               </VStack>
             </Box>
@@ -732,7 +827,7 @@ const EnhancedLearningAnalytics = ({ videoId, userId }) => {
                           px={3}
                           py={1}
                         >
-                          {summary?.distractionLevel || "Unknown"}
+                          {summary?.distractionLevel || "Low"}
                         </Badge>
                       </Flex>
 
