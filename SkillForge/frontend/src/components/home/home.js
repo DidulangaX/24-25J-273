@@ -79,7 +79,7 @@ export default function Home() {
             title: 'Game-Based Learning',
             description: 'Engage in interactive learning with fun challenges.',
             image: 'images/Game.jpg',
-            link: '/game-learning'
+            link: '/adaptiveHome'
           }, {
             title: 'Module Page',
             description: 'Explore structured learning modules.',

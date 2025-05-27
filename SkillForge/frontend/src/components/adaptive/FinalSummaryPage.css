@@ -1,0 +1,31 @@
+.final-summary-page{
+  max-width:960px;margin:0 auto;padding:2rem;
+}
+
+.ai-loading{margin-top:2rem;font-style:italic;color:#555;text-align:center;}
+
+.ai-card{
+  background:#fff;padding:2rem;border-radius:12px;margin-top:2rem;
+  box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+
+.ai-card h3{margin-top:1.25rem;}
+.ai-area{margin-bottom:1rem;}
+.ai-area ul{margin-left:1.5rem;}
+.ai-card ul{padding-left:1.2rem;}
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 8px 15px;
+  background: rgba(255,255,255,0.9);
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.back-button:hover {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}

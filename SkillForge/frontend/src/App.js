@@ -34,6 +34,20 @@ import QuestionDetailPage from './components/communitysupport/QuestionDetailPage
 import InterviewPractice from './components/interviewPreperation/InterviewPractice';
 import InterviewSession from './components/interviewPreperation/InterviewSession';
 
+//ovinda
+import { Leaderboard } from "./components/adaptive";
+import ChallengeSessionPage from "./components/adaptive/ChallengeSessionPage";
+import ChallengeFriendsPage from "./components/adaptive/ChallengeFriendsPage";
+import ChallengeWaitingPage from "./components/adaptive/ChallengeWaitingPage";
+import ChallengeResultsPage from "./components/adaptive/ChallengeResultsPage.js";
+import MyAttemptsPage from "./components/adaptive/MyAttemptsPage";
+import AttemptSummaryPage from "./components/adaptive/AttemptSummaryPage";
+import AdaptiveQuestionPage from "./components/adaptive/AdaptiveQuestionPage";
+import AdaptiveHomePage from "./components/adaptive/AdaptiveHomePage";
+import AdaptiveTestIntroPage from "./components/adaptive/AdaptiveTestIntroPage";
+import ChallengeIntroPage from "./components/adaptive/ChallengeIntroPage";
+
+
 import {
   NAVIGATE_TO_HOME,
   NAVIGATE_TO_LOGIN,
@@ -124,6 +138,49 @@ export default function App() {
             <Route path="/interview" element={<InterviewPractice />} />
             <Route path="/start-interview" element={<InterviewSession />} />
             <Route path="/community/questions/:questionId" element={<QuestionDetailPage />} />
+
+            {/* Adaptive Learning */}
+            {/* Leaderboard */}
+          <Route path="/leaderboard" element={<Leaderboard />} />
+
+          {/* Challenge system */}
+          <Route
+            path="/challenge/:sessionId"
+            element={<ChallengeSessionPage />}
+          />
+          <Route path="/challenge-friends" element={<ChallengeFriendsPage />} />
+          <Route
+            path="/challenge-waiting/:sessionId"
+            element={<ChallengeWaitingPage />}
+          />
+          <Route
+            path="/challenge-results/:sessionId"
+            element={<ChallengeResultsPage />}
+          />
+
+          {/* ----------- NEW MULTI-ATTEMPT ROUTES ----------- */}
+          <Route
+            path="/myAttempts"
+            element={<MyAttemptsPage userId={uData?._id || uData?.username} />}
+          />
+          <Route
+            path="/questions"
+            element={
+              <AdaptiveQuestionPage userId={uData?._id || uData?.username} />
+            }
+          />
+          
+          {/* Fixed route - using AttemptSummaryPage instead of undefined FinalSummaryPage */}
+          <Route
+            path="/attemptSummary/:attemptNumber"
+            element={
+              <AttemptSummaryPage userId={uData?._id || uData?.username} />
+            }
+          />
+
+        <Route path="/adaptiveHome" element={<AdaptiveHomePage />} />
+        <Route path="/adaptiveTestIntro" element={<AdaptiveTestIntroPage />} />
+        <Route path="/challengeIntro" element={<ChallengeIntroPage />} />
 
             {/* Protected */}
             <Route path={NAVIGATE_TO_COURSE} element={isLoggedIn && isStudent ? <Course /> : <Error />} />
